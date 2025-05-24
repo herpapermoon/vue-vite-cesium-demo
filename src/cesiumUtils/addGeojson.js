@@ -1,45 +1,46 @@
-/* eslint-disable no-underscore-dangle */
 import Cesium from '@/cesiumUtils/cesium'
 
-const viewPosition = [116.388404, 39.8960601]
-let geojson
+// 武汉中心坐标
+const viewPosition = [114.305469, 30.593175]
+let buildingTileset
 
 export const addGeojson = async(viewer) => {
-  const url = `${import.meta.env.VITE_BUILD_PATH_PREFIX}/geojson/gugong.geojson`
-  geojson = await Cesium.GeoJsonDataSource.load(url, {
-    stroke: Cesium.Color.WHITE,
-    fill: Cesium.Color.BLUE.withAlpha(0.3),
-    strokeWidth: 5
-  })
-  viewer.dataSources.add(geojson)
-  const entities = geojson.entities.values
-  const colorHash = {}
-  entities.forEach((entity) => {
-    const { name } = entity
-    let color = colorHash[name]
-    if (!color) {
-      color = Cesium.Color.fromCssColorString(entity.properties.color._value || '#fff')
-      colorHash[name] = color
-    }
-    entity.polygon.material = color
-    entity.polygon.outline = false
-    entity.polygon.extrudedHeight = (entity.properties.height._value || 0)
-  })
+  // 方案1：使用Cesium ion提供的全球3D建筑数据
+  const ionAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwMWI4NjEzMC1mMTUwLTRkYjItOTFmMC02YTQ3Nzc0NTQ4YjAiLCJpZCI6MjkzMTc2LCJpYXQiOjE3NDQzNjk4NTV9.kSLOXqOdJOAW28z0wxJaH7EnI21xucABvIDwiFzLj8U'; // 需要注册Cesium ion获取
+  Cesium.Ion.defaultAccessToken = ionAccessToken;
+  
+  buildingTileset = viewer.scene.primitives.add(
+    new Cesium.Cesium3DTileset({
+      url: Cesium.IonResource.fromAssetId(96188), // 全球建筑数据集ID
+      maximumScreenSpaceError: 2
+    })
+  )
+  
+  // 设置样式
+  if (buildingTileset) {
+    buildingTileset.style = new Cesium.Cesium3DTileStyle({
+      color: 'color("white", 0.8)',
+      show: true
+    })
+  }
+
+  // 飞行到武汉
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(
       ...viewPosition,
-      1000
+      2000
     ),
     orientation: {
-      heading: Cesium.Math.toRadians(0, 0),
-      pitch: Cesium.Math.toRadians(-20),
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-45),
       roll: 0.0
     }
   })
 }
 
 export const removeGeojson = (viewer) => {
-  if (geojson) {
-    viewer.dataSources.remove(geojson)
+  if (buildingTileset && !buildingTileset.isDestroyed()) {
+    viewer.scene.primitives.remove(buildingTileset)
+    buildingTileset = undefined
   }
 }

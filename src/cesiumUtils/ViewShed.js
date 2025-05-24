@@ -1,5 +1,3 @@
-/* eslint-disable no-template-curly-in-string */
-/* eslint-disable no-underscore-dangle */
 // ViewShed.js
 import Cesium from '@/cesiumUtils/cesium'
 
@@ -42,6 +40,8 @@ function getPitch(fromPosition, toPosition) {
  * @param {Boolean} options.enabled 阴影贴图是否可用。
  * @param {Boolean} options.softShadows 是否启用柔和阴影。
  * @param {Boolean} options.size 每个阴影贴图的大小。
+ * @param {Boolean} options.loadModel 是否加载默认建筑模型。
+ * @param {Boolean} options.interactive 是否启用交互式点选。
  */
 export default class ViewShed {
   constructor(viewer, options = {}) {
@@ -59,6 +59,13 @@ export default class ViewShed {
     this.enabled = (typeof options.enabled === 'boolean') ? options.enabled : true
     this.softShadows = (typeof options.softShadows === 'boolean') ? options.softShadows : true
     this.size = options.size || 2048
+    this.loadModel = (typeof options.loadModel === 'boolean') ? options.loadModel : true // 新增：控制是否加载模型
+    this.interactive = (typeof options.interactive === 'boolean') ? options.interactive : false // 新增：是否允许交互式选点
+    this.pointSelectionHandler = null // 新增：点选事件处理器
+    this.viewpointMarker = null // 新增：观察点标记实体
+    this.targetMarker = null // 新增：目标点标记实体
+    this.markerEntities = [] // 新增：存储所有创建的标记实体
+
     this.GLSL = `
     #define USE_CUBE_MAP_SHADOW true
     uniform sampler2D colorTexture;
@@ -180,11 +187,19 @@ export default class ViewShed {
             }
         }
     }`
+    
     this.update()
+    
+    // 如果启用了交互模式，初始化点选功能
+    if (this.interactive) {
+      this.enablePointSelection()
+    }
   }
 
   // 加载三维模型
   addTileSet() {
+    if (!this.loadModel) return; // 如果不加载模型，直接返回
+    
     const tileset = this.viewer.scene.primitives.add(new Cesium.Cesium3DTileset({
       url: `${import.meta.env.VITE_BUILD_PATH_PREFIX}/tilesets/buildings/tileset.json`
     }))
@@ -211,6 +226,97 @@ export default class ViewShed {
       }
     })
     this.tileset = tileset
+  }
+
+  // 新增：启用交互式点选功能
+  enablePointSelection() {
+    // 清除已有的处理器
+    this.disablePointSelection();
+    
+    // 状态变量
+    let selectionMode = 'viewpoint'; // 'viewpoint' 或 'target'
+    
+    // 创建新的事件处理器
+    this.pointSelectionHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+    
+    // 处理左键点击事件
+    this.pointSelectionHandler.setInputAction((click) => {
+      const ray = this.viewer.camera.getPickRay(click.position);
+      const position = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+      
+      if (Cesium.defined(position)) {
+        if (selectionMode === 'viewpoint') {
+          // 设置观测点
+          this.viewPosition = position;
+          
+          // 添加观测点标记
+          this.viewpointMarker = this.addMarker(position, Cesium.Color.BLUE, '观测点');
+          
+          // 提示用户选择目标点
+          this.showInfoMessage('请点击选择目标点位置');
+          selectionMode = 'target';
+        } else {
+          // 设置目标点
+          this.viewPositionEnd = position;
+          
+          // 添加目标点标记
+          this.targetMarker = this.addMarker(position, Cesium.Color.RED, '目标点');
+          
+          // 计算距离、方向
+          this.viewDistance = Cesium.Cartesian3.distance(this.viewPosition, this.viewPositionEnd);
+          this.viewHeading = getHeading(this.viewPosition, this.viewPositionEnd);
+          this.viewPitch = getPitch(this.viewPosition, this.viewPositionEnd);
+          
+          // 更新可视域分析
+          this.update();
+          
+          // 重置选择模式
+          selectionMode = 'viewpoint';
+        }
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  }
+  
+  // 新增：禁用交互式点选功能
+  disablePointSelection() {
+    if (this.pointSelectionHandler) {
+      this.pointSelectionHandler.destroy();
+      this.pointSelectionHandler = null;
+    }
+  }
+  
+  // 新增：添加标记点
+  addMarker(position, color, label) {
+    const entity = this.viewer.entities.add({
+      position: position,
+      point: {
+        pixelSize: 10,
+        color: color,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      },
+      label: label ? {
+        text: label,
+        font: '14px sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        outlineWidth: 2,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -10)
+      } : undefined
+    });
+    
+    // 将标记添加到数组以便后续清理
+    this.markerEntities.push(entity);
+    
+    return entity;
+  }
+  
+  // 新增：显示信息提示
+  showInfoMessage(message) {
+    // 如果在实际环境中，可以使用更友好的UI提示
+    // 这里使用简单的alert作为示例
+    alert(message);
   }
 
   // 创建相机
@@ -396,15 +502,31 @@ export default class ViewShed {
     this.createPostStage()
     this.drawFrustumOutline()
     this.drawSketch()
-    this.addTileSet()
+    this.addTileSet() // 这个调用现在会根据loadModel决定是否执行
   }
 
   update() {
     this.clear()
     this.add()
+    
+    // 如果是交互模式，重新添加之前的标记点
+    if (this.interactive && this.viewPosition && this.viewPositionEnd) {
+      this.viewpointMarker = this.addMarker(this.viewPosition, Cesium.Color.BLUE, '观测点');
+      this.targetMarker = this.addMarker(this.viewPositionEnd, Cesium.Color.RED, '目标点');
+    }
   }
 
   clear() {
+    // 清除所有标记实体
+    if (this.markerEntities && this.markerEntities.length > 0) {
+      for (const entity of this.markerEntities) {
+        this.viewer.entities.remove(entity);
+      }
+      this.markerEntities = [];
+      this.viewpointMarker = null;
+      this.targetMarker = null;
+    }
+    
     if (this.sketch) {
       this.viewer.entities.removeById(this.sketch.id)
       this.sketch = null

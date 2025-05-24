@@ -1,0 +1,85 @@
+/* Cities: Skylines风格的主题 */
+:root {
+  --cl-primary: #0080c0;
+  --cl-primary-dark: #006090;
+  --cl-secondary: #1a3a5a;
+  --cl-text: #ffffff;
+  /* 更新背景颜色，降低透明度 */
+  --cl-background: rgba(15, 30, 45, 0.95);
+  --cl-panel-bg: rgba(10, 20, 35, 0.95);
+  --cl-hover: #20a0e0;
+  --cl-border: #40a0d0;
+  --cl-icon-bg: rgba(0, 80, 120, 0.9);
+  
+  /* 添加新的变量用于控件背景 */
+  --cl-control-bg: rgba(25, 40, 60, 0.95);
+  --cl-submenu-bg: rgba(8, 16, 28, 0.95);
+}
+
+.cl-panel {
+  background: var(--cl-panel-bg);
+  border: 1px solid var(--cl-border);
+  border-radius: 4px;
+  color: var(--cl-text);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.cl-button {
+  background: var(--cl-secondary);
+  color: var(--cl-text);
+  border: 1px solid var(--cl-border);
+  border-radius: 3px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: var(--cl-hover);
+  }
+  
+  &.active {
+    background: var(--cl-primary);
+  }
+}
+
+.cl-panel-header {
+  background: var(--cl-primary-dark);
+  padding: 8px 12px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--cl-border);
+}
+
+.cl-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cl-icon-bg);
+  border-radius: 4px;
+  margin: 4px;
+  cursor: pointer;
+  
+  &:hover {
+    background: var(--cl-hover);
+  }
+}
+
+.cl-collapse-button {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cl-primary-dark);
+  color: var(--cl-text);
+  border-radius: 4px;
+  cursor: pointer;
+  
+  &:hover {
+    background: var(--cl-hover);
+  }
+}
