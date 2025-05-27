@@ -23,7 +23,7 @@ function getPitch(fromPosition, toPosition) {
 
 /**
  * ViewShedStage
- * @author Jack
+ * 
  * @alias ViewShedStage
  * @class
  * @param {Cesium.Viewer} viewer Cesium三维视窗。
