@@ -1052,56 +1052,70 @@ export const updateBikeStatus = (id, status) => {
       bike.billboard.image = getIconByStatus(status);
     }
     
-    // 如果状态变为使用中，添加路径信息
-    if (status === BikeStatus.IN_USE && oldStatus !== BikeStatus.IN_USE) {
-      const roadSegment = getRandomRoadSegment();
-      if (roadSegment) {
+    // 如果状态变为骑行，添加路径信息
+    if (status === BikeStatus.RIDING && oldStatus !== BikeStatus.RIDING) {
+      // 找到最近的道路线段
+      const nearestRoad = findNearestRoadSegment([bike.longitude, bike.latitude]);
+      
+      if (nearestRoad && nearestRoad.segment) {
+        const { segment, point, progress } = nearestRoad;
+        
+        // 随机决定方向
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        
         bike.routeInfo = {
-          currentSegment: roadSegment,
-          progress: 0,
-          speed: 0.002 + Math.random() * 0.004, // 较慢的速度使移动更平滑
-          direction: 1
+          currentSegment: segment,
+          progress: progress,
+          speed: 0.001 + Math.random() * 0.002, // 随机速度
+          direction: direction,
+          visitedSegments: new Set([segment.id]) // 记录已访问的线段
         };
         
-        // 将位置更新为线段起点
-        const [startLon, startLat] = roadSegment.start;
-        bike.longitude = startLon;
-        bike.latitude = startLat;
-        
-        const newPosition = Cesium.Cartesian3.fromDegrees(startLon, startLat, BIKE_HEIGHT);
-        bike.position = newPosition.clone();
-        bike.billboard.position = newPosition;
+        // 设置平滑过渡到道路上
+        bike.routeInfo.transition = {
+          startTime: Date.now(),
+          duration: 2.0, // 2秒过渡
+          startPos: [bike.longitude, bike.latitude],
+          endPos: point,
+          segmentAfterTransition: {
+            segment: segment,
+            direction: direction,
+            startProgress: progress
+          }
+        };
+      } else {
+        // 如果找不到最近的道路，使用随机道路段
+        const roadSegment = getRandomRoadSegment();
+        if (roadSegment) {
+          bike.routeInfo = {
+            currentSegment: roadSegment,
+            progress: 0,
+            speed: 0.001 + Math.random() * 0.002, // 较慢的速度使移动更平滑
+            direction: 1,
+            visitedSegments: new Set([roadSegment.id]) // 记录已访问的线段
+          };
+          
+          // 将位置更新为线段起点
+          const [startLon, startLat] = roadSegment.start;
+          
+          // 设置过渡动画
+          bike.routeInfo.transition = {
+            startTime: Date.now(),
+            duration: 3.0, // 3秒过渡时间
+            startPos: [bike.longitude, bike.latitude],
+            endPos: [startLon, startLat],
+            segmentAfterTransition: {
+              segment: roadSegment,
+              direction: 1,
+              startProgress: 0
+            }
+          };
+        }
       }
     } 
-    // 如果状态从使用中变为其他，移除路径信息
-    else if (oldStatus === BikeStatus.IN_USE && status !== BikeStatus.IN_USE) {
+    // 如果状态从骑行变为其他，移除路径信息
+    else if (oldStatus === BikeStatus.RIDING && status !== BikeStatus.RIDING) {
       delete bike.routeInfo;
-    }
-    
-    return true;
-  }
-  return false;
-};
-
-/**
- * 更新单车电量
- * @param {string} id - 单车ID
- * @param {number} batteryLevel - 新电量（0-100）
- * @returns {boolean} 是否更新成功
- */
-export const updateBikeBattery = (id, batteryLevel) => {
-  const bike = getBikeById(id);
-  if (bike) {
-    bike.batteryLevel = batteryLevel;
-    bike.lastUpdated = Date.now();
-    
-    // 如果电量低于20%，更新状态为低电量
-    if (batteryLevel < 20 && bike.status !== BikeStatus.LOW_BATTERY) {
-      return updateBikeStatus(id, BikeStatus.LOW_BATTERY);
-    }
-    // 如果电量恢复且当前是低电量状态，更新为可用状态
-    else if (batteryLevel >= 20 && bike.status === BikeStatus.LOW_BATTERY) {
-      return updateBikeStatus(id, BikeStatus.AVAILABLE);
     }
     
     return true;
