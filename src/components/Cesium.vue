@@ -21,11 +21,47 @@
   <!-- 右侧通知面板 -->
   <Notifications ref="notificationsRef" />
   
-  <!-- 实时视频流容器，根据videoShow状态显示/隐藏 -->
-  <div class="h5videodiv" :class="{ show: videoShow }">
-    <video id="h5sVideo1" class="h5video" autoplay webkit-playsinline playsinline></video>
-    <div class="playpause">
-      <img :src="play" alt="">
+  <!-- 实时视频流容器，改为v-show而不是class控制显示隐藏 -->
+  <div id="videoContainer" class="h5videodiv" v-show="videoShow" ref="videoContainerRef">
+    <div class="video-header">
+      <span>监控视频</span>
+      <div class="video-controls">
+        <button @click="toggleDetection" :class="{ active: detectionActive }">{{ detectionActive ? '停止识别' : '启动识别' }}</button>
+        <button @click="toggleVideoPlay"><img :src="play" alt="播放/暂停"></button>
+      </div>
+    </div>
+    <div class="video-wrapper">
+      <video 
+        id="h5sVideo1" 
+        class="h5video" 
+        autoplay 
+        muted
+        controls
+        preload="auto"
+        crossorigin="anonymous"
+        webkit-playsinline 
+        playsinline
+        width="320" 
+        height="240"
+        @loadeddata="onVideoLoaded"
+        @loadedmetadata="onVideoMetadata"
+        @canplay="onVideoCanPlay"
+        @error="onVideoError"
+      ></video>
+      <!-- 检测画布直接在这里创建，不通过JS动态创建 -->
+      <canvas id="detectionCanvas" class="detection-canvas"></canvas>
+    </div>
+    <div class="detection-stats" v-if="detectionActive">
+      <div class="stat-row">
+        <div class="stat-label">当前帧单车:</div>
+        <div class="stat-value" :class="{ 'has-bikes': detectedBikesCount > 0 }">{{ detectedBikesCount }}</div>
+      </div>
+      <div class="stat-note" v-if="detectedBikesCount > 0">
+        实时检测中...（检测数: {{detectedBikesCount}}）
+      </div>
+      <div class="stat-note" v-else>
+        等待检测到单车...
+      </div>
     </div>
   </div>
   
@@ -47,6 +83,9 @@ import play from '@/assets/play.png'
 import LeftSidebar from '@/components/LeftSidebar.vue'
 import BottomToolbar from '@/components/BottomToolbar.vue'
 import Notifications from '@/components/Notifications.vue'
+
+// 导入单车视觉识别模块
+import BikeDetection from '@/cesiumUtils/bikeDetection'
 
 // 导入各种Cesium功能模块
 import { initCesium } from '@/cesiumUtils/initCesium'
@@ -94,6 +133,7 @@ let direct              // 直线飞行路径实例
 let round               // 迂回飞行路径实例
 let circle              // 环绕飞行路径实例
 let measureTool         // 测量工具实例
+let bikeDetector        // 单车视觉识别模块实例
 
 let viewer3D = null     // Cesium查看器实例
 
@@ -110,6 +150,9 @@ const langModel = langRef
 // 响应式状态变量
 const videoShow = ref(false)     // 控制视频显示
 const clickedDrone = ref(false)  // 是否点击了无人机按钮
+const detectionActive = ref(false) // 单车检测是否激活
+const detectedBikesCount = ref(0) // 检测到的单车数量
+const autoStartDetection = ref(true) // 是否自动启动检测
 
 // 初始化测量工具
 const showMeasure = () => {
@@ -120,6 +163,263 @@ const showMeasure = () => {
     viewer: viewer3D,
     target: 'measure'
   })
+}
+
+// 切换单车视觉识别的开关
+const toggleDetection = async () => {
+  try {
+    console.log('触发toggleDetection');
+    
+    // 检查Cesium查看器是否已初始化
+    if (!viewer3D || !viewer3D.scene) {
+      console.error('Cesium查看器尚未初始化，请稍后再试');
+      showNotification('视觉识别', 'Cesium地图尚未加载完成，请稍后再试', 'error');
+      return;
+    }
+    
+    // 强制显示视频容器
+    if (!videoShow.value) {
+      console.log('视频容器当前隐藏，设置为显示');
+      videoShow.value = true;
+      
+      // 给Vue一点时间更新DOM
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // 确保视频元素存在
+    const videoElement = document.getElementById('h5sVideo1');
+    if (!videoElement) {
+      showNotification('视觉识别', '未找到视频元素', 'error');
+      return;
+    }
+    
+    // 如果视频未加载，尝试加载一个测试视频
+    if (videoElement.readyState < 2) {
+      console.log('当前视频状态:', videoElement.readyState);
+      
+      if (!videoElement.src || videoElement.src === '') {
+        console.log('视频源未设置，配置测试视频');
+        
+        // 使用正确的public路径
+        const videoUrl = window.location.hostname === 'localhost' 
+          ? '/assets/VCG2214050653.mp4'  // 开发环境
+          : './assets/VCG2214050653.mp4'; // 生产环境
+          
+        videoElement.src = videoUrl;
+        videoElement.preload = 'auto'; // 确保预加载
+        videoElement.load();
+        
+        console.log('视频路径设置为:', videoElement.currentSrc || videoElement.src);
+        showNotification('视频加载', '正在加载测试视频...', 'info');
+      }
+      
+      // 等待视频加载一段时间
+      try {
+        await new Promise((resolve, reject) => {
+          const onReady = () => {
+            videoElement.removeEventListener('canplaythrough', onReady);
+            videoElement.removeEventListener('loadeddata', onReady);
+            videoElement.removeEventListener('error', onError);
+            resolve();
+          };
+          
+          const onError = (e) => {
+            videoElement.removeEventListener('canplaythrough', onReady);
+            videoElement.removeEventListener('loadeddata', onReady);
+            videoElement.removeEventListener('error', onError);
+            reject(e);
+          };
+          
+          videoElement.addEventListener('canplaythrough', onReady, { once: true });
+          videoElement.addEventListener('loadeddata', onReady, { once: true });
+          videoElement.addEventListener('error', onError, { once: true });
+          
+          // 5秒后无论如何继续
+          setTimeout(() => {
+            if (videoElement.videoWidth > 0) {
+              resolve();
+            } else {
+              console.warn('视频加载超时，但尝试继续');
+              resolve(); // 仍然尝试继续
+            }
+          }, 5000);
+        });
+      } catch (err) {
+        console.warn('等待视频加载时发生问题:', err);
+        // 继续尝试
+      }
+    }
+    
+    // 如果视频已暂停，尝试播放
+    if (videoElement.paused) {
+      try {
+        await videoElement.play();
+        console.log('视频播放已开始');
+      } catch (e) {
+        console.warn('无法自动播放视频:', e);
+      }
+    }
+
+    // 初始化或切换检测
+    if (detectionActive.value) {
+      // 已在检测中，停止检测
+      console.log('停止单车检测...');
+      if (bikeDetector) {
+        bikeDetector.stopDetection();
+      }
+      detectionActive.value = false;
+      showNotification('视觉识别', '单车视觉识别已停止', 'info');
+    } else {
+      // 未在检测，开始检测
+      console.log('准备启动单车检测...');
+      
+      // 初始化检测器（如果尚未初始化）
+      if (!bikeDetector) {
+        console.log('初始化单车检测器...');
+        bikeDetector = new BikeDetection(viewer3D);
+        
+        // 注册事件监听器
+        bikeDetector.on('detection', (data) => {
+          console.log('收到检测事件:', data);
+          // 更新UI
+          detectedBikesCount.value = data.count;
+          
+          // 更新底部统计信息(如果存在)
+          const detectionStats = document.querySelector('.detection-stats');
+          if (detectionStats) {
+            // 更新检测数量值
+            const countEl = detectionStats.querySelector('.stat-value');
+            if (countEl) {
+              countEl.textContent = data.count;
+              countEl.classList.toggle('has-bikes', data.count > 0);
+            }
+            
+            // 更新底部提示文本
+            const noteEls = detectionStats.querySelectorAll('.stat-note');
+            noteEls.forEach(el => {
+              el.style.display = 'none';
+            });
+            
+            if (data.count > 0) {
+              const activeNote = detectionStats.querySelector('.stat-note:first-of-type');
+              if (activeNote) {
+                activeNote.style.display = 'block';
+                activeNote.textContent = `实时检测中...（检测数: ${data.count}）`;
+              }
+            } else {
+              const waitingNote = detectionStats.querySelector('.stat-note:last-of-type');
+              if (waitingNote) {
+                waitingNote.style.display = 'block';
+              }
+            }
+          }
+        });
+        
+        bikeDetector.on('error', (error) => {
+          console.error('检测器错误:', error);
+          showNotification('视觉识别', `检测错误: ${error.message}`, 'error');
+        });
+        
+        const initSuccess = await bikeDetector.initialize('h5sVideo1');
+        
+        if (!initSuccess) {
+          showNotification('视觉识别', '初始化单车检测模块失败', 'error');
+          return;
+        }
+        
+        console.log('单车检测器初始化成功');
+      }
+      
+      // 启动检测
+      console.log('启动检测...');
+      const success = await bikeDetector.startDetection();
+      
+      if (success) {
+        detectionActive.value = true;
+        showNotification('视觉识别', '单车视觉识别已启动', 'info');
+      } else {
+        showNotification('视觉识别', '启动单车检测失败', 'error');
+      }
+    }
+  } catch (error) {
+    console.error('切换检测状态时发生错误:', error);
+    showNotification('视觉识别', `操作失败: ${error.message}`, 'error');
+  }
+}
+
+// 切换视频播放暂停
+const toggleVideoPlay = () => {
+  const video = document.getElementById('h5sVideo1');
+  if (!video) return;
+  
+  if (video.paused) {
+    video.play().catch(err => {
+      console.error('视频播放失败:', err);
+      showNotification('视频播放', '启动视频失败，请检查视频源', 'error');
+    });
+  } else {
+    video.pause();
+  }
+}
+
+// 视频加载成功事件
+const onVideoLoaded = (event) => {
+  console.log('视频数据已加载:', event.target.videoWidth, 'x', event.target.videoHeight);
+  showNotification('视频加载', '监控视频加载成功', 'info');
+  
+  // 如果启用了自动检测，加载完成后自动开始
+  if (videoShow.value && !detectionActive.value && autoStartDetection.value) {
+    setTimeout(() => {
+      toggleDetection();
+    }, 1000);
+  }
+}
+
+// 视频元数据加载完成事件
+const onVideoMetadata = (event) => {
+  console.log('视频元数据已加载:', 
+    '时长=', event.target.duration, 
+    '尺寸=', event.target.videoWidth, 'x', event.target.videoHeight);
+  
+  // 尝试立即播放
+  try {
+    event.target.play().catch(err => console.warn('元数据加载后播放失败:', err));
+  } catch (e) {
+    console.warn('尝试播放视频时出错:', e);
+  }
+}
+
+// 视频可以播放事件
+const onVideoCanPlay = (event) => {
+  console.log('视频可以播放了');
+  
+  // 如果启用了自动检测且还未开始检测，在可以播放时启动
+  if (autoStartDetection.value && !detectionActive.value) {
+    setTimeout(() => {
+      if (!detectionActive.value) {
+        console.log('视频可播放，自动启动检测');
+        toggleDetection();
+      }
+    }, 500);
+  }
+}
+
+// 视频加载失败事件
+const onVideoError = (error) => {
+  const videoElement = error.target;
+  console.error('视频加载错误:', error, 
+    videoElement.error ? `错误代码: ${videoElement.error.code}` : '');
+  
+  showNotification('视频加载', `监控视频加载失败: ${videoElement.error ? videoElement.error.message : '未知错误'}`, 'error');
+  
+  // 尝试使用备用视频
+  setTimeout(() => {
+    if (videoElement && !videoElement.src.includes('fallback')) {
+      console.log('尝试加载备用视频...');
+      videoElement.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+      videoElement.load();
+    }
+  }, 2000);
 }
 
 // 通用功能调用函数，根据按钮激活状态决定执行成功或失败的回调
@@ -546,6 +846,87 @@ case 'visionAnalysis': {
       }
       break
     }
+    case 'bikeDetection': {
+      // 单车视觉识别
+      caller(active, async () => {
+        console.log('激活单车视觉识别功能');
+        
+        // 显示视频流
+        videoShow.value = true;
+        
+        // 等待DOM更新
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // 初始化测试视频源
+        const videoElement = document.getElementById('h5sVideo1');
+        if (videoElement) {
+          console.log('找到视频元素，准备加载视频源');
+          
+          try {
+            // 使用测试视频源 - 注意vite开发服务器的路径是相对于根目录的
+            const videoUrl = window.location.hostname === 'localhost' 
+              ? '/assets/VCG2214050653.mp4'  // 开发环境
+              : './assets/VCG2214050653.mp4'; // 生产环境
+              
+            console.log('设置视频源:', videoUrl);
+            videoElement.src = videoUrl;
+            
+            // 确保视频预加载
+            videoElement.preload = 'auto';
+            videoElement.load();
+            
+            // 尝试自动播放
+            try {
+              await videoElement.play();
+              console.log('视频已自动播放');
+            } catch (e) {
+              console.warn('无法自动播放视频，需要用户交互');
+              videoElement.controls = true;
+            }
+          } catch (err) {
+            console.error('加载视频失败:', err);
+            showNotification('视频加载', '无法加载视频，请检查资源路径', 'error');
+          }
+        }
+        
+        // 启动单车视觉识别
+        await toggleDetection();
+        
+        // 注释掉位置管理相关功能，仅保留通知
+        /*
+        // 显示共享单车统计视图
+        setTimeout(() => {
+          if (leftSidebarRef.value) {
+            leftSidebarRef.value.showBikeStats();
+          }
+        }, 1000);
+        */
+        
+        showNotification('单车管理', '已启动单车视觉识别模式', 'info');
+      }, async () => {
+        console.log('停用单车视觉识别功能');
+        
+        // 停止单车检测
+        if (detectionActive.value) {
+          await toggleDetection();
+        }
+        
+        // 清理视频元素
+        const videoElement = document.getElementById('h5sVideo1');
+        if (videoElement) {
+          videoElement.pause();
+          videoElement.src = '';
+          videoElement.load();
+        }
+        
+        // 关闭视频流
+        videoShow.value = false;
+        
+        back2Home();
+        showNotification('单车管理', '已退出单车视觉识别模式', 'info');
+      });
+      break;
+    }
     case 'addEcharts': {
       // 结合ECharts
       addEcharts(viewer3D, active)
@@ -566,10 +947,8 @@ onMounted(() => {
   setTimeout(() => { 
     // 初始化Cesium查看器
     viewer3D = initCesium('3d')
-    
     // 将viewer3D暴露为全局变量以便其他组件使用
     window.viewer3D = viewer3D
-    
     // 显示测量工具
     showMeasure()
     // 显示欢迎通知
@@ -594,36 +973,129 @@ onMounted(() => {
   position: fixed;
   left: 70px;
   top: 60px;
-  width: 250px;
-  background-color: #000000;
+  width: 320px;
+  background-color: rgba(0, 0, 0, 0.85);
   border: 2px solid var(--cl-border);
   border-radius: 4px;
   overflow: hidden;
   z-index: 1100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease-in-out;
   
-  /* 修改这里：添加display属性并调整transform */
-  display: none; /* 默认完全隐藏 */
-  transform: translateX(-350px); /* 确保移出更远 */
-  transition: all 0.3s ease-in-out;
+  .video-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--cl-secondary);
+    padding: 6px 10px;
+    color: var(--cl-text);
+    border-bottom: 1px solid var(--cl-border);
+    
+    span {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .video-controls {
+      display: flex;
+      gap: 8px;
+      
+      button {
+        background: var(--cl-primary);
+        border: none;
+        border-radius: 3px;
+        padding: 3px 8px;
+        color: white;
+        font-size: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &:hover {
+          background: var(--cl-hover);
+        }
+        
+        &.active {
+          background: #e74c3c; // 红色表示停止
+        }
+        
+        img {
+          width: 12px;
+          height: 12px;
+        }
+      }
+    }
+  }
   
-  &.show {
-    display: block; /* 显示时改为block */
-    transform: translateX(0);
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    height: 240px; /* 确保有足够的高度 */
+    overflow: hidden;
   }
   
   video {
     width: 100%;
     height: 100%;
+    display: block;
+    object-fit: contain; /* 保持视频比例 */
+    z-index: 1;
   }
   
-  .playpause {
+  .detection-canvas {
     position: absolute;
-    left: calc(50% - 10px);
-    top: calc(50% - 10px);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2; /* 确保canvas在视频上层 */
+    pointer-events: none; /* 确保不会捕获鼠标事件 */
+  }
+  
+  .detection-stats {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 12px;
+    color: white;
+    font-size: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
     
-    img {
-      cursor: pointer;
-      width: 20px;
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    
+    .stat-label {
+      font-weight: bold;
+      color: #00FFFF;
+    }
+    
+    .stat-value {
+      background: rgba(0, 255, 255, 0.2);
+      border-radius: 3px;
+      padding: 1px 6px;
+      min-width: 20px;
+      text-align: center;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      
+      &.has-bikes {
+        background: rgba(0, 255, 100, 0.5);
+        color: #FFFFFF;
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+        transform: scale(1.1);
+        box-shadow: 0 0 5px rgba(0, 255, 100, 0.7);
+      }
+    }
+    
+    .stat-note {
+      font-size: 10px;
+      color: #aaa;
+      text-align: center;
+      margin-top: 2px;
+      font-style: italic;
     }
   }
 }
