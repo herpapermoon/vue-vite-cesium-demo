@@ -1,5 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
 import * as cocossd from '@tensorflow-models/coco-ssd';
+import BikePositionManager from './BikePositionManager';
+import CameraManager from './CameraManager';
+
 class BikeDetection {
   constructor(viewer) {
     this.viewer = viewer;
@@ -8,7 +11,11 @@ class BikeDetection {
     this.videoElement = null;
     this.canvas = null;
     this.ctx = null;
-    // this.bikePositionManager = new BikePositionManager(viewer); // 暂时禁用位置管理
+    
+    // 初始化摄像头管理器和单车位置管理器
+    this.cameraManager = new CameraManager(viewer);
+    this.bikePositionManager = new BikePositionManager(viewer, this.cameraManager);
+    
     this.detectInterval = null;
     this.detectedBikes = new Map(); // 存储检测到的单车ID和位置
     this.previousBikes = new Map(); // 存储上一帧检测到的单车
@@ -73,6 +80,11 @@ class BikeDetection {
       // 添加窗口大小变化事件监听器
       window.addEventListener('resize', () => {
         this.resizeCanvas();
+      });
+      
+      // 将BikePositionManager的事件转发
+      this.bikePositionManager.on('positionUpdate', (data) => {
+        this.emit('positionUpdate', data);
       });
       
       console.log('检测器初始化完成');
@@ -196,7 +208,7 @@ class BikeDetection {
     this.detectedBikes.clear();
     this.previousBikes.clear();
     this.bikeTrackingInfo.clear();
-    // this.bikePositionManager.clearAllBikes();
+    this.bikePositionManager.clearAllBikes();
     
     // 发送检测停止事件
     this.emit('detection', { count: 0, bikes: [] });
@@ -510,6 +522,15 @@ class BikeDetection {
       // 保存本次检测结果，用于下一帧的匹配
       this.previousBikes = new Map(this.detectedBikes);
       
+      // 更新单车在地图上的位置
+      if (this.cameraManager.getActiveCamera()) {
+        this.bikePositionManager.updateFromDetection(
+          detectedItems,
+          this.videoElement.videoWidth,
+          this.videoElement.videoHeight
+        );
+      }
+      
       // 发送检测结果事件
       this.emit('detection', {
         count: detectedItems.length,
@@ -532,8 +553,6 @@ class BikeDetection {
     try {
       // 存储检测到的单车信息
       this.detectedBikes.set(id, bikeData); 
-      
-      // TODO: 将来在此处添加位置管理功能
       console.log('检测到单车:', id, bikeData.type, `置信度: ${Math.round(bikeData.confidence * 100)}%`);
     } catch (error) {
       console.error('更新单车位置时出错:', error);
@@ -541,38 +560,70 @@ class BikeDetection {
     }
   }
 
-  // 在canvas上绘制检测状态
-  // drawDetectionStatus(text) {
-  //   if (!this.ctx || !this.canvas) return;
+  /**
+   * 添加固定摄像头
+   * @param {Object} options 摄像头配置
+   * @returns {string} 摄像头ID
+   */
+  addCamera(options) {
+    return this.cameraManager.addCamera(options);
+  }
+  
+  /**
+   * 移除摄像头
+   * @param {string} cameraId 摄像头ID
+   */
+  removeCamera(cameraId) {
+    this.cameraManager.removeCamera(cameraId);
+  }
+  
+  /**
+   * 激活摄像头
+   * @param {string} cameraId 摄像头ID
+   */
+  activateCamera(cameraId) {
+    return this.cameraManager.activateCamera(cameraId);
+  }
+  
+  /**
+   * 获取统计数据
+   * @returns {Object} 统计信息
+   */
+  getStats() {
+    return this.bikePositionManager.getStats();
+  }
+  
+  /**
+   * 显示单车轨迹
+   * @param {string} bikeId 单车ID
+   * @param {boolean} show 是否显示
+   */
+  showBikeTrail(bikeId, show = true) {
+    return this.bikePositionManager.showBikeTrail(bikeId, show);
+  }
+  
+  /**
+   * 启用/禁用热力图
+   * @param {boolean} enabled 是否启用
+   */
+  setHeatmapEnabled(enabled) {
+    this.bikePositionManager.setHeatmapEnabled(enabled);
+  }
+  
+  /**
+   * 清除所有资源
+   */
+  destroy() {
+    this.stopDetection();
+    this.cameraManager.clear();
+    this.bikePositionManager.clearAllBikes();
     
-  //   // 设置文字样式
-  //   this.ctx.font = '20px Arial';
-  //   this.ctx.textAlign = 'center';
+    if (this.canvas) {
+      window.removeEventListener('resize', this.resizeCanvas);
+    }
     
-  //   // 绘制文字背景
-  //   this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  //   const textWidth = this.ctx.measureText(text).width;
-  //   this.ctx.fillRect(
-  //     this.canvas.width / 2 - textWidth / 2 - 10,
-  //     10,
-  //     textWidth + 20,
-  //     30
-  //   );
-    
-  //   // 绘制边框
-  //   this.ctx.strokeStyle = '#00FFFF';
-  //   this.ctx.lineWidth = 2;
-  //   this.ctx.strokeRect(
-  //     this.canvas.width / 2 - textWidth / 2 - 10,
-  //     10,
-  //     textWidth + 20,
-  //     30
-  //   );
-    
-  //   // 绘制文字
-  //   this.ctx.fillStyle = '#FFFFFF';
-  //   this.ctx.fillText(text, this.canvas.width / 2, 30);
-  // }
+    this.eventListeners.clear();
+  }
 }
 
 export default BikeDetection; 

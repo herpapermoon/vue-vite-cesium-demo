@@ -21,6 +21,15 @@
   <!-- 右侧通知面板 -->
   <Notifications ref="notificationsRef" />
   
+  <!-- 摄像头设置面板 -->
+  <CameraSetup 
+    :bike-detector="bikeDetector" 
+    :visible="cameraSetupVisible" 
+    @close="cameraSetupVisible = false"
+    @camera-added="onCameraAdded"
+    @camera-activated="onCameraActivated"
+  />
+  
   <!-- 实时视频流容器，改为v-show而不是class控制显示隐藏 -->
   <div id="videoContainer" class="h5videodiv" v-show="videoShow" ref="videoContainerRef">
     <div class="video-header">
@@ -28,6 +37,7 @@
       <div class="video-controls">
         <button @click="toggleDetection" :class="{ active: detectionActive }">{{ detectionActive ? '停止识别' : '启动识别' }}</button>
         <button @click="toggleVideoPlay"><img :src="play" alt="播放/暂停"></button>
+        <button @click="cameraSetupVisible = !cameraSetupVisible" :class="{ active: cameraSetupVisible }">摄像头设置</button>
       </div>
     </div>
     <div class="video-wrapper">
@@ -63,6 +73,10 @@
         等待检测到单车...
       </div>
     </div>
+    <div class="camera-status" v-if="activeCameraName">
+      <div class="camera-status-label">当前摄像头:</div>
+      <div class="camera-status-value">{{ activeCameraName }}</div>
+    </div>
   </div>
   
   <!-- 语言选择下拉框 -->
@@ -83,6 +97,7 @@ import play from '@/assets/play.png'
 import LeftSidebar from '@/components/LeftSidebar.vue'
 import BottomToolbar from '@/components/BottomToolbar.vue'
 import Notifications from '@/components/Notifications.vue'
+import CameraSetup from '@/components/CameraSetup.vue'
 
 // 导入单车视觉识别模块
 import BikeDetection from '@/cesiumUtils/bikeDetection'
@@ -133,7 +148,7 @@ let direct              // 直线飞行路径实例
 let round               // 迂回飞行路径实例
 let circle              // 环绕飞行路径实例
 let measureTool         // 测量工具实例
-let bikeDetector        // 单车视觉识别模块实例
+let bikeDetector = null // 单车视觉识别模块实例
 
 let viewer3D = null     // Cesium查看器实例
 
@@ -153,6 +168,28 @@ const clickedDrone = ref(false)  // 是否点击了无人机按钮
 const detectionActive = ref(false) // 单车检测是否激活
 const detectedBikesCount = ref(0) // 检测到的单车数量
 const autoStartDetection = ref(true) // 是否自动启动检测
+const cameraSetupVisible = ref(false) // 控制摄像头设置面板的显示
+const activeCameraName = ref('') // 当前激活的摄像头名称
+
+// 摄像头相关方法
+const onCameraAdded = (cameraId) => {
+  showNotification('摄像头管理', '摄像头添加成功', 'info');
+  // 如果没有激活的摄像头，自动激活新添加的
+  if (!bikeDetector.cameraManager.getActiveCamera()) {
+    bikeDetector.activateCamera(cameraId);
+    updateActiveCameraName();
+  }
+}
+
+const onCameraActivated = (cameraId) => {
+  updateActiveCameraName();
+  showNotification('摄像头管理', `已激活摄像头: ${activeCameraName.value}`, 'info');
+}
+
+const updateActiveCameraName = () => {
+  const activeCamera = bikeDetector?.cameraManager?.getActiveCamera();
+  activeCameraName.value = activeCamera ? activeCamera.name : '';
+}
 
 // 初始化测量工具
 const showMeasure = () => {
@@ -320,6 +357,16 @@ const toggleDetection = async () => {
           showNotification('视觉识别', `检测错误: ${error.message}`, 'error');
         });
         
+        // 监听位置更新事件
+        bikeDetector.on('positionUpdate', (data) => {
+          console.log('单车位置更新:', data.bikes.length, '辆单车');
+          
+          // 如果左侧边栏存在并有显示单车统计的方法，则调用
+          if (leftSidebarRef.value && typeof leftSidebarRef.value.updateBikeStats === 'function') {
+            leftSidebarRef.value.updateBikeStats(data.stats);
+          }
+        });
+        
         const initSuccess = await bikeDetector.initialize('h5sVideo1');
         
         if (!initSuccess) {
@@ -328,6 +375,12 @@ const toggleDetection = async () => {
         }
         
         console.log('单车检测器初始化成功');
+        
+        // 检查是否有可用的摄像头，如果没有则提示添加
+        if (bikeDetector.cameraManager.cameras.size === 0) {
+          showNotification('摄像头管理', '请添加摄像头以启用位置检测功能', 'info');
+          cameraSetupVisible.value = true;
+        }
       }
       
       // 启动检测
@@ -337,6 +390,9 @@ const toggleDetection = async () => {
       if (success) {
         detectionActive.value = true;
         showNotification('视觉识别', '单车视觉识别已启动', 'info');
+        
+        // 更新当前激活的摄像头名称
+        updateActiveCameraName();
       } else {
         showNotification('视觉识别', '启动单车检测失败', 'error');
       }
@@ -892,15 +948,11 @@ case 'visionAnalysis': {
         // 启动单车视觉识别
         await toggleDetection();
         
-        // 注释掉位置管理相关功能，仅保留通知
-        /*
-        // 显示共享单车统计视图
-        setTimeout(() => {
-          if (leftSidebarRef.value) {
-            leftSidebarRef.value.showBikeStats();
-          }
-        }, 1000);
-        */
+        // 如果没有摄像头，自动显示摄像头设置面板
+        if (bikeDetector && bikeDetector.cameraManager.cameras.size === 0) {
+          cameraSetupVisible.value = true;
+          showNotification('摄像头管理', '请添加摄像头以启用位置检测功能', 'info');
+        }
         
         showNotification('单车管理', '已启动单车视觉识别模式', 'info');
       }, async () => {
@@ -919,8 +971,9 @@ case 'visionAnalysis': {
           videoElement.load();
         }
         
-        // 关闭视频流
+        // 关闭视频流和摄像头设置面板
         videoShow.value = false;
+        cameraSetupVisible.value = false;
         
         back2Home();
         showNotification('单车管理', '已退出单车视觉识别模式', 'info');
@@ -1138,6 +1191,61 @@ onMounted(() => {
   
   &:focus-visible {
     outline: 0;
+  }
+}
+
+/* 添加摄像头状态样式 */
+.camera-status {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: white;
+}
+
+.camera-status-label {
+  font-weight: bold;
+  color: #00FFFF;
+  margin-right: 8px;
+}
+
+.camera-status-value {
+  background: rgba(0, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* 修改视频控制按钮样式，支持3个按钮 */
+.video-controls {
+  display: flex;
+  gap: 5px;
+  
+  button {
+    background: var(--cl-primary);
+    border: none;
+    border-radius: 3px;
+    padding: 3px 6px;
+    color: white;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &:hover {
+      background: var(--cl-hover);
+    }
+    
+    &.active {
+      background: #e74c3c; // 红色表示停止/关闭
+    }
+    
+    img {
+      width: 12px;
+      height: 12px;
+    }
   }
 }
 </style>
