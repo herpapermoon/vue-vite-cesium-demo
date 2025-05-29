@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div class="resources">
     <div class="resource-section">
       <h4>能源供应</h4>
@@ -202,4 +202,4 @@
     }
   }
 }
-</style>
+</style> -->

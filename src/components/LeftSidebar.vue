@@ -31,9 +31,9 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import CityData from './sidebar/CityData.vue';
-import Statistics from './sidebar/Statistics.vue';
-import Resources from './sidebar/Resources.vue';
+// import CityData from './sidebar/CityData.vue';
+// import Statistics from './sidebar/Statistics.vue';
+// import Resources from './sidebar/Resources.vue';
 import BikeStats from './sidebar/BikeStats.vue';
 import BikeManagement from './sidebar/BikeManagement.vue';
 import TripPlanner from './sidebar/TripPlanner.vue';

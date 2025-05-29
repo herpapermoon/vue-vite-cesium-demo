@@ -67,43 +67,74 @@ function loadTilesShader(tileset) {
     }
   })
 }
-export const setWhiteBuild = (viewer, active) => {
+export const setWhiteBuild = async(viewer, active) => {
   if (active) {
     if (primitive) {
       viewer.zoomTo(
         tilesetPrimitive,
         new Cesium.HeadingPitchRange(
           0.0,
-          -0.45, // 略微调整俯角以获得更好的视角
-          tilesetPrimitive.boundingSphere.radius * 1.8 // 稍微拉近以看清细节
+          -0.45,
+          tilesetPrimitive.boundingSphere.radius * 1.8
         )
       )
       return
     }
-    primitive = viewer.scene.primitives.add(new Cesium.PrimitiveCollection())
-    new Cesium.Cesium3DTileset({
-      url: '/city/CugMoudle_3Dtiles.json',
-      maximumScreenSpaceError: 2, // 降低屏幕空间误差，提高清晰度
-      maximumMemoryUsage: 2048 // 增加内存使用上限，提高模型质量
-    }).readyPromise
-      .then((data) => {
-        tilesetPrimitive = data
-        primitive.add(tilesetPrimitive)
-        loadTilesShader(tilesetPrimitive)
-        viewer.zoomTo(
-          tilesetPrimitive,
-          new Cesium.HeadingPitchRange(
-            0.0,
-            -0.45,
-            tilesetPrimitive.boundingSphere.radius * 1.8
-          )
+    
+    try {
+      Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhOTRlOWE4NC1iNjczLTQzOTMtYmMzZi01NDA3NTE5NTFjNzQiLCJpZCI6MjkzOTU3LCJpYXQiOjE3NDQ2MzA2MTl9.OmRyRoAbHCuII3-CzVIcnbwogxdJ3JVhx-DPMJuDBpg'
+      tilesetPrimitive = new Cesium.Cesium3DTileset({
+        url: Cesium.IonResource.fromAssetId(3387364),
+        maximumScreenSpaceError: 1, // 降低到1，提高显示精度（默认值是16）
+        maximumMemoryUsage: 4096,   // 增加内存使用限制，允许加载更高精度的瓦片
+        preferLeaves: true,         // 优先加载叶节点，提高详细程度
+        dynamicScreenSpaceError: true, // 启用动态屏幕空间误差
+        dynamicScreenSpaceErrorDensity: 0.00278, // 优化动态误差密度
+        dynamicScreenSpaceErrorFactor: 4.0, // 提高动态误差因子
+        dynamicScreenSpaceErrorHeightFalloff: 0.25 // 调整高度衰减
+      });
+
+      viewer.scene.primitives.add(tilesetPrimitive);
+      // 等待模型加载完成
+      await tilesetPrimitive.readyPromise;
+      // 应用自定义着色器
+      loadTilesShader(tilesetPrimitive)
+      
+      // 视角缩放到模型
+      await viewer.zoomTo(
+        tilesetPrimitive,
+        new Cesium.HeadingPitchRange(
+          0.0,
+          -0.45,
+          tilesetPrimitive.boundingSphere.radius * 1.8
         )
+      )
+      
+      // 模型加载完成后，跳转到中国地质大学（武汉）未来城校区
+      const destinationPosition = Cesium.Cartesian3.fromDegrees(
+        114.58515,
+        30.435571,
+        2500
+      )
+      
+      // 设置相机视角
+      viewer.camera.flyTo({
+        destination: destinationPosition,
+        orientation: {
+          heading: Cesium.Math.toRadians(30.0),
+          pitch: Cesium.Math.toRadians(-35.0),
+          roll: 0.0
+        },
+        duration: 3.0,
+        complete: function() {
+          console.log('已定位至中国地质大学（武汉）未来城校区')
+        }
       })
-      .catch(error => {
-        console.error('加载3D模型失败:', error);
-      })
-  } else if (primitive) {
-    primitive.removeAll()
-    primitive = null
+    } catch (error) {
+      console.error('加载Ion 3D模型失败:', error)
+    }
+  } else if (tilesetPrimitive) {
+    viewer.scene.primitives.remove(tilesetPrimitive)
+    tilesetPrimitive = null
   }
 }
