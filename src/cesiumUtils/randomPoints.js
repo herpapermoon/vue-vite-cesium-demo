@@ -49,8 +49,8 @@ const loadRoadNetwork = async () => {
   if (roadNetworkData) return roadNetworkData;
   
   try {
-    // 使用 fetch 获取 GeoJSON 文件
-    const response = await fetch('/src/assets/ships/武汉.geojson');
+    // 使用 fetch 获取 GeoJSON 文件 - 修改为 wlcroad.geojson
+    const response = await fetch('/src/assets/ships/wlcroad.geojson');
     roadNetworkData = await response.json();
     
     // 提取道路线段供移动使用
@@ -72,17 +72,15 @@ const loadRoadNetwork = async () => {
 const extractRoadSegments = (roadNetwork) => {
   roadSegments = [];
   
-  // 按道路类型筛选重要道路
+  // 按道路类型筛选重要道路 - 修改为使用 fclass 属性筛选
   const mainRoads = roadNetwork.features.filter(feature => {
-    const highway = feature.properties.highway;
-    const waterway = feature.properties.waterway;
+    const fclass = feature.properties.fclass;
     return (
-      highway === 'trunk' || 
-      highway === 'primary' || 
-      highway === 'secondary' || 
-      highway === 'tertiary' ||
-      waterway === 'river' || 
-      waterway === 'canal'
+      fclass === 'residential' || 
+      fclass === 'living_street' || 
+      fclass === 'secondary' || 
+      fclass === 'tertiary' || 
+      fclass === 'footway'
     );
   });
   
@@ -95,15 +93,32 @@ const extractRoadSegments = (roadNetwork) => {
     // 获取道路坐标
     const coordinates = road.geometry.coordinates;
     
+    // 对于 MultiLineString 类型
+    if (road.geometry.type === 'MultiLineString') {
+      // 遍历每条线
+      coordinates.forEach((line, lineIndex) => {
+        for (let i = 0; i < line.length - 1; i++) {
+          const segmentId = `segment-${roadIndex}-${lineIndex}-${i}`;
+          roadSegments.push({
+            id: segmentId,
+            start: line[i],
+            end: line[i + 1],
+            roadId: road.properties.fid || `road-${roadIndex}`,
+            startNodeId: `node-${roadIndex}-${lineIndex}-${i}`,
+            endNodeId: `node-${roadIndex}-${lineIndex}-${i+1}`
+          });
+        }
+      });
+    }
     // 对于 LineString 类型
-    if (road.geometry.type === 'LineString') {
+    else if (road.geometry.type === 'LineString') {
       for (let i = 0; i < coordinates.length - 1; i++) {
         const segmentId = `segment-${roadIndex}-${i}`;
         roadSegments.push({
           id: segmentId,
           start: coordinates[i],
           end: coordinates[i + 1],
-          roadId: road.id || `road-${roadIndex}`,
+          roadId: road.properties.fid || `road-${roadIndex}`,
           startNodeId: `node-${roadIndex}-${i}`,
           endNodeId: `node-${roadIndex}-${i+1}`
         });
@@ -297,22 +312,20 @@ const pointToLineDistance = (point, lineStart, lineEnd) => {
  * @param {Array} bounds - 边界 [minLon, minLat, maxLon, maxLat]
  * @returns {Array} 生成的点 [[lon, lat], ...]
  */
-const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistance = 100, bounds = [113.8, 30.2, 114.7, 30.8]) => {
+const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistance = 100, bounds = [114.605, 30.45, 114.62, 30.465]) => {
   const points = [];
   const features = roadNetwork.features;
   const [minLon, minLat, maxLon, maxLat] = bounds;
   
-  // 按道路类型筛选重要道路
+  // 按道路类型筛选道路 - 修改为使用 fclass 属性筛选
   const mainRoads = features.filter(feature => {
-    const highway = feature.properties.highway;
-    const waterway = feature.properties.waterway;
+    const fclass = feature.properties.fclass;
     return (
-      highway === 'trunk' || 
-      highway === 'primary' || 
-      highway === 'secondary' || 
-      highway === 'tertiary' ||
-      waterway === 'river' || 
-      waterway === 'canal'
+      fclass === 'residential' || 
+      fclass === 'living_street' || 
+      fclass === 'secondary' || 
+      fclass === 'tertiary' || 
+      fclass === 'footway'
     );
   });
   
@@ -333,8 +346,52 @@ const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistan
     // 获取道路坐标
     const coordinates = road.geometry.coordinates;
     
+    // 对于 MultiLineString 类型
+    if (road.geometry.type === 'MultiLineString') {
+      // 随机选择一条线
+      const lineIndex = Math.floor(Math.random() * coordinates.length);
+      const line = coordinates[lineIndex];
+      
+      // 随机选择线段
+      const segmentIndex = Math.floor(Math.random() * (line.length - 1));
+      const start = line[segmentIndex];
+      const end = line[segmentIndex + 1];
+      
+      // 在线段上随机选择一个点
+      const t = Math.random();
+      const baseX = start[0] + t * (end[0] - start[0]);
+      const baseY = start[1] + t * (end[1] - start[1]);
+      
+      // 计算垂直于线段的方向
+      const dx = end[0] - start[0];
+      const dy = end[1] - start[1];
+      const length = Math.sqrt(dx * dx + dy * dy);
+      
+      if (length === 0) continue;
+      
+      // 垂直向量
+      const perpX = -dy / length;
+      const perpY = dx / length;
+      
+      // 随机距离，在minDistance到maxDistance之间
+      const distance = minDistance + Math.random() * (maxDistance - minDistance);
+      
+      // 随机决定方向（左侧或右侧）
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      
+      // 计算最终点坐标
+      // 将距离从米转换为度（粗略估计：1度约等于111km）
+      const distanceDeg = distance / 111000;
+      const finalX = baseX + direction * perpX * distanceDeg;
+      const finalY = baseY + direction * perpY * distanceDeg;
+      
+      // 检查是否在边界内
+      if (finalX >= minLon && finalX <= maxLon && finalY >= minLat && finalY <= maxLat) {
+        points.push([finalX, finalY]);
+      }
+    }
     // 对于 LineString 类型
-    if (road.geometry.type === 'LineString') {
+    else if (road.geometry.type === 'LineString') {
       // 随机选择线段
       const segmentIndex = Math.floor(Math.random() * (coordinates.length - 1));
       const start = coordinates[segmentIndex];
@@ -379,12 +436,12 @@ const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistan
 };
 
 /**
- * 生成限定在武汉市的随机坐标点，沿道路网分布
+ * 生成随机坐标点，沿道路网分布
  * @param {number} count - 生成的坐标点数量
  * @param {Array} center - 中心点坐标 [纬度, 经度, 高度]
  * @returns {Promise<Cesium.Cartesian3[]>} 三维笛卡尔坐标数组
  */
-const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
+const generatePos = async (count = 200, center = [30.457, 114.615, 0]) => {
   // 加载道路网络数据
   const roadNetwork = await loadRoadNetwork();
   
@@ -401,7 +458,7 @@ const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
     count, 
     10,  // 最小距离10米
     100, // 最大距离100米
-    [baseLon - 0.75, baseLat - 0.5, baseLon + 0.75, baseLat + 0.5] // 范围约束
+    [baseLon - 0.015, baseLat - 0.01, baseLon + 0.015, baseLat + 0.01] // 范围约束 - 已调整为wlcroad区域
   );
   
   // 如果生成的点不足，用随机点补充
@@ -426,13 +483,13 @@ const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
  * @param {Array} center - 中心点坐标 [纬度, 经度, 高度]
  * @returns {Cesium.Cartesian3[]} 三维笛卡尔坐标数组
  */
-const generateRandomPos = (count = 200, center = [30.58, 114.31, 0]) => {
+const generateRandomPos = (count = 200, center = [30.457, 114.615, 0]) => {
   const [baseLat, baseLon, baseH] = center;
   
   return Array(count).fill().map(() => {
-    // 限制生成范围（纬度±0.5度 ≈ 55km，经度±0.75度 ≈ 73km）
-    const latOffset = (Math.random() * 1.0 - 0.5);  // 纬度范围：30.08 ~ 31.08
-    const lonOffset = (Math.random() * 1.5 - 0.75); // 经度范围：113.56 ~ 115.06
+    // 限制生成范围（纬度±0.01度 ≈ 1.1km，经度±0.015度 ≈ 1.5km）
+    const latOffset = (Math.random() * 0.02 - 0.01);  // 纬度范围
+    const lonOffset = (Math.random() * 0.03 - 0.015); // 经度范围
     
     // 转换为Cesium三维坐标
     return Cesium.Cartesian3.fromDegrees(
@@ -951,3 +1008,4 @@ export const focusOnBikes = (viewer) => {
   // 飞向单车分布区域
   flyToBikes(viewer, positions);
 };
+
