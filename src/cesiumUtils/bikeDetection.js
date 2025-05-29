@@ -11,6 +11,11 @@ class BikeDetection {
     // this.bikePositionManager = new BikePositionManager(viewer); // 暂时禁用位置管理
     this.detectInterval = null;
     this.detectedBikes = new Map(); // 存储检测到的单车ID和位置
+    this.previousBikes = new Map(); // 存储上一帧检测到的单车
+    this.bikeTrackingInfo = new Map(); // 存储单车追踪信息，包括ID和历史位置
+    this.nextTrackingId = 1; // 跟踪ID计数器
+    this.bikeDisappearTimeout = 10; // 单车消失多少帧后移除跟踪，单位：帧数，放宽到10帧
+    this.maxTrackingDistance = 150; // 最大追踪距离，单位：像素，放宽到150像素
     this.eventListeners = new Map(); // 存储事件监听器
   }
 
@@ -154,6 +159,9 @@ class BikeDetection {
     
     // 先清空检测结果，并发送初始值0
     this.detectedBikes.clear();
+    this.previousBikes.clear();
+    this.bikeTrackingInfo.clear();
+    this.nextTrackingId = 1;
     this.emit('detection', { count: 0, bikes: [] });
     
     // 开始定期检测
@@ -161,7 +169,7 @@ class BikeDetection {
       if (this.videoElement.readyState >= 2) {
         this.detectFrame();
       }
-    }, 200); // 每200ms检测一次，平衡性能与响应速度
+    }, 1000); // 每1000ms检测一次，降低频率提高稳定性
     
     this.emit('started', true);
     console.log('单车检测已启动');
@@ -186,6 +194,8 @@ class BikeDetection {
     
     // 清除地图上的实体
     this.detectedBikes.clear();
+    this.previousBikes.clear();
+    this.bikeTrackingInfo.clear();
     // this.bikePositionManager.clearAllBikes();
     
     // 发送检测停止事件
@@ -212,6 +222,189 @@ class BikeDetection {
     this.canvas.height = wrapperHeight;
   }
 
+  // 计算两个点之间的欧几里得距离
+  calculateDistance(x1, y1, x2, y2) {
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+  }
+
+  // 计算两个矩形的IoU (Intersection over Union)
+  calculateIoU(box1, box2) {
+    // 获取两个矩形的坐标
+    const [x1, y1, w1, h1] = box1;
+    const [x2, y2, w2, h2] = box2;
+    
+    // 计算矩形的右下角坐标
+    const x1_right = x1 + w1;
+    const y1_bottom = y1 + h1;
+    const x2_right = x2 + w2;
+    const y2_bottom = y2 + h2;
+    
+    // 计算交集的坐标
+    const x_overlap = Math.max(0, Math.min(x1_right, x2_right) - Math.max(x1, x2));
+    const y_overlap = Math.max(0, Math.min(y1_bottom, y2_bottom) - Math.max(y1, y2));
+    
+    // 计算交集面积
+    const intersectionArea = x_overlap * y_overlap;
+    
+    // 计算两个矩形的面积
+    const box1Area = w1 * h1;
+    const box2Area = w2 * h2;
+    
+    // 计算并集面积
+    const unionArea = box1Area + box2Area - intersectionArea;
+    
+    // 计算IoU
+    return unionArea > 0 ? intersectionArea / unionArea : 0;
+  }
+
+  // 匹配当前帧和前一帧的单车
+  matchBikes(currentBikes) {
+    // 创建匹配结果存储
+    const matchedBikes = new Map();
+    const unmatched = [...currentBikes];
+    
+    // 如果是第一帧或前一帧没有单车，则所有单车都是新的
+    if (this.previousBikes.size === 0) {
+      return { matchedBikes, unmatched };
+    }
+    
+    // 对于每个当前帧中的单车，尝试匹配前一帧中的单车
+    for (let i = unmatched.length - 1; i >= 0; i--) {
+      const currentBike = unmatched[i];
+      const currentBox = [currentBike.x - currentBike.width/2, currentBike.y - currentBike.height/2, 
+                           currentBike.width, currentBike.height];
+      
+      let bestMatch = null;
+      let bestScore = -1;
+      let bestTrackingId = null;
+      
+      // 遍历前一帧中的所有单车
+      for (const [trackingId, prevBike] of this.bikeTrackingInfo.entries()) {
+        // 如果单车已经消失了设定的帧数，则不再考虑匹配
+        if (prevBike.missedFrames > this.bikeDisappearTimeout) continue;
+        
+        // 获取最近一次位置
+        const lastPosition = prevBike.positions[prevBike.positions.length - 1];
+        if (!lastPosition) continue;
+        
+        // 计算距离分数
+        const distance = this.calculateDistance(
+          currentBike.x, currentBike.y, 
+          lastPosition.x, lastPosition.y
+        );
+        
+        // 如果距离太远，不考虑匹配
+        if (distance > this.maxTrackingDistance) continue;
+        
+        // 计算IoU分数
+        const prevBox = [lastPosition.x - lastPosition.width/2, lastPosition.y - lastPosition.height/2, 
+                          lastPosition.width, lastPosition.height];
+        const iou = this.calculateIoU(currentBox, prevBox);
+        
+        // 综合考虑距离和IoU进行评分，为推车场景优化权重
+        // 为距离给予更高权重，因为推车时形状可能会变化但位置相对接近
+        const distanceScore = 1 - Math.min(distance / this.maxTrackingDistance, 1);
+        const score = iou * 0.3 + distanceScore * 0.7; // 调整权重，距离因素权重更高
+        
+        // 更新最佳匹配，降低阈值，更容易匹配
+        if (score > bestScore && score > 0.2) { // 降低阈值到0.2
+          bestScore = score;
+          bestMatch = prevBike;
+          bestTrackingId = trackingId;
+        }
+      }
+      
+      // 如果找到匹配，更新匹配结果
+      if (bestMatch && bestTrackingId) {
+        matchedBikes.set(bestTrackingId, currentBike);
+        unmatched.splice(i, 1); // 从未匹配列表中移除
+      }
+    }
+    
+    // 特殊处理：如果同一区域检测到多辆单车，可能是因为推车造成的多重检测
+    // 尝试合并非常接近的未匹配单车
+    this.mergeCloseBikes(unmatched);
+    
+    return { matchedBikes, unmatched };
+  }
+
+  // 合并非常接近的单车检测结果，解决推车问题
+  mergeCloseBikes(bikes) {
+    const mergeDistance = 30; // 合并阈值，单位：像素
+    
+    for (let i = bikes.length - 1; i >= 0; i--) {
+      for (let j = i - 1; j >= 0; j--) {
+        const bikeA = bikes[i];
+        const bikeB = bikes[j];
+        
+        // 计算两辆单车中心点距离
+        const distance = this.calculateDistance(bikeA.x, bikeA.y, bikeB.x, bikeB.y);
+        
+        // 如果距离小于阈值，认为是同一辆单车的多次检测，移除其中一个
+        if (distance < mergeDistance) {
+          // 保留置信度更高的检测结果
+          if (bikeA.confidence < bikeB.confidence) {
+            bikes.splice(i, 1);
+          } else {
+            bikes.splice(j, 1);
+          }
+          break; // 跳出内层循环，外层循环会自动调整i值
+        }
+      }
+    }
+  }
+
+  // 更新跟踪信息
+  updateTrackingInfo(matchedBikes, newBikes) {
+    // 更新已匹配单车的信息
+    for (const [trackingId, bikeData] of matchedBikes.entries()) {
+      const trackInfo = this.bikeTrackingInfo.get(trackingId);
+      if (trackInfo) {
+        // 更新位置历史
+        trackInfo.positions.push({...bikeData});
+        // 限制历史位置数量，避免内存占用过大
+        if (trackInfo.positions.length > 20) { // 增加历史位置数量到20，提高追踪稳定性
+          trackInfo.positions.shift();
+        }
+        // 重置消失计数
+        trackInfo.missedFrames = 0;
+        // 更新最后出现时间
+        trackInfo.lastSeen = Date.now();
+      }
+    }
+    
+    // 为未匹配的单车创建新的跟踪信息
+    for (const newBike of newBikes) {
+      const trackingId = `bike-${this.nextTrackingId++}`;
+      this.bikeTrackingInfo.set(trackingId, {
+        positions: [{...newBike}],
+        firstSeen: Date.now(),
+        lastSeen: Date.now(),
+        missedFrames: 0,
+        type: newBike.type
+      });
+      // 添加到匹配结果中
+      matchedBikes.set(trackingId, newBike);
+    }
+    
+    // 更新未在当前帧中出现的单车的消失计数
+    for (const [trackingId, trackInfo] of this.bikeTrackingInfo.entries()) {
+      if (!matchedBikes.has(trackingId)) {
+        trackInfo.missedFrames += 1;
+      }
+    }
+    
+    // 清理长时间未被检测到的单车
+    for (const [trackingId, trackInfo] of this.bikeTrackingInfo.entries()) {
+      if (trackInfo.missedFrames > this.bikeDisappearTimeout) {
+        // 单车已经消失太久，从跟踪列表中移除
+        this.bikeTrackingInfo.delete(trackingId);
+      }
+    }
+    
+    return matchedBikes;
+  }
+
   // 检测视频帧中的单车
   async detectFrame() {
     if (!this.isRunning || !this.model || !this.videoElement) return;
@@ -233,8 +426,6 @@ class BikeDetection {
         return;
       }
       
-
-      
       // 使用模型预测当前视频帧中的对象
       const predictions = await this.model.detect(this.videoElement);
       
@@ -246,51 +437,82 @@ class BikeDetection {
       // 清除上一帧的绘制结果
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       
-      // 清除历史数据，只保留当前帧的检测结果
-      this.detectedBikes.clear();
+      // 保存当前检测到的单车数据，用于匹配
+      const currentFrameBikes = [];
       
-      
-      
-      // 绘制检测结果
-      const detectedItems = [];
-      
-      bikePredictions.forEach((prediction, idx) => {
+      // 处理当前帧检测到的单车
+      bikePredictions.forEach((prediction) => {
         const [x, y, width, height] = prediction.bbox;
-        const id = `bike-${Date.now()}-${idx}`;
         const confidence = prediction.score;
         
-        // 绘制边界框
-        this.ctx.strokeStyle = '#00FFFF';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, width, height);
-        
-        // 绘制标签
-        this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
-        this.ctx.fillRect(x, y - 20, 80, 20);
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '16px Arial';
-        this.ctx.fillText(`单车: ${Math.round(confidence * 100)}%`, x, y - 5);
-        
         // 记录检测到的单车数据
-        const bikeData = {
-          id,
+        currentFrameBikes.push({
           x: x + width / 2,
           y: y + height / 2,
           width,
           height,
           confidence,
           type: prediction.class
+        });
+      });
+      
+      // 匹配当前帧和前一帧的单车
+      const { matchedBikes, unmatched } = this.matchBikes(currentFrameBikes);
+      
+      // 更新跟踪信息
+      const trackedBikes = this.updateTrackingInfo(matchedBikes, unmatched);
+      
+      // 清除当前帧的检测结果，准备更新
+      this.detectedBikes.clear();
+      
+      // 绘制检测结果并更新检测到的单车
+      const detectedItems = [];
+      
+      for (const [trackingId, bikeData] of trackedBikes.entries()) {
+        const x = bikeData.x - bikeData.width / 2;
+        const y = bikeData.y - bikeData.height / 2;
+        const width = bikeData.width;
+        const height = bikeData.height;
+        const confidence = bikeData.confidence;
+        
+        // 绘制边界框
+        this.ctx.strokeStyle = '#00FFFF';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x, y, width, height);
+        
+        // 绘制标签背景
+        this.ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+        this.ctx.fillRect(x, y - 20, width > 100 ? width : 100, 20);
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '16px Arial';
+        
+        // 显示ID和置信度
+        const shortId = trackingId.split('-')[1]; // 只显示数字部分
+        this.ctx.fillText(`ID:${shortId} ${Math.round(confidence * 100)}%`, x, y - 5);
+        
+        // 记录检测到的单车数据
+        const bikeDataWithId = {
+          id: trackingId,
+          x: bikeData.x,
+          y: bikeData.y,
+          width,
+          height,
+          confidence,
+          type: bikeData.type
         };
         
-        detectedItems.push(bikeData);
+        detectedItems.push(bikeDataWithId);
         
         // 更新单车位置
-        this.updateBikePosition(id, bikeData);
-      });
+        this.updateBikePosition(trackingId, bikeDataWithId);
+      }
+      
+      // 保存本次检测结果，用于下一帧的匹配
+      this.previousBikes = new Map(this.detectedBikes);
       
       // 发送检测结果事件
       this.emit('detection', {
-        count: bikePredictions.length,
+        count: detectedItems.length,
         bikes: detectedItems
       });
       
