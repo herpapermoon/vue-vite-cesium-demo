@@ -8,6 +8,9 @@ import ship4 from '@/assets/ships/ship4.png'
 // 单车图标资源数组
 const images = [ship0, ship1, ship2, ship3, ship4]
 
+// 单车高度（米）
+const BIKE_HEIGHT = 17;
+
 // 全局存储容器
 // let labels = []     // 标签集合 - 不再需要文字标签
 let billboards = [] // 广告牌集合
@@ -467,14 +470,14 @@ const generatePos = async (count = 200, center = [30.457, 114.615, 0]) => {
     const randomPoints = generateRandomPos(count - points.length, center);
     
     // 转换生成的路点为Cesium.Cartesian3
-    const roadPoints = points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH));
+    const roadPoints = points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH + BIKE_HEIGHT));
     
     // 合并道路点和随机点
     return [...roadPoints, ...randomPoints];
   }
   
   // 转换生成的点为Cesium.Cartesian3
-  return points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH));
+  return points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH + BIKE_HEIGHT));
 };
 
 /**
@@ -495,7 +498,7 @@ const generateRandomPos = (count = 200, center = [30.457, 114.615, 0]) => {
     return Cesium.Cartesian3.fromDegrees(
       baseLon + lonOffset,  // 东经偏移
       baseLat + latOffset,  // 北纬偏移
-      baseH                 // 固定高度
+      baseH + BIKE_HEIGHT   // 固定高度 + 单车高度(10米)
     );
   });
 };
@@ -539,7 +542,7 @@ const updateBikePositionAlongRoad = (bike) => {
       const [newLon, newLat] = interpolatePosition(startPos, endPos, progress);
       
       // 更新位置
-      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, 0);
+      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
       bike.position = newPosition.clone();
       bike.billboard.position = newPosition;
       bike.longitude = newLon;
@@ -583,7 +586,7 @@ const updateBikePositionAlongRoad = (bike) => {
       
       // 更新位置
       const [newLon, newLat] = newPos;
-      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, 0);
+      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
       bike.position = newPosition.clone();
       bike.billboard.position = newPosition;
       bike.longitude = newLon;
@@ -634,7 +637,7 @@ const updateBikePositionAlongRoad = (bike) => {
   const newLat = startLat + newProgress * (endLat - startLat);
   
   // 更新位置
-  const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, 0);
+  const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
   bike.position = newPosition.clone();
   bike.billboard.position = newPosition;
   bike.longitude = newLon;
@@ -816,7 +819,7 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
         bikeInfo.longitude = startLon + progress * (endLon - startLon);
         bikeInfo.latitude = startLat + progress * (endLat - startLat);
         
-        const newPosition = Cesium.Cartesian3.fromDegrees(bikeInfo.longitude, bikeInfo.latitude, 0);
+        const newPosition = Cesium.Cartesian3.fromDegrees(bikeInfo.longitude, bikeInfo.latitude, BIKE_HEIGHT);
         bikeInfo.position = newPosition.clone();
         bikeInfo.billboard.position = newPosition;
       }
@@ -928,7 +931,7 @@ export const updateBikeStatus = (id, status) => {
         bike.longitude = startLon;
         bike.latitude = startLat;
         
-        const newPosition = Cesium.Cartesian3.fromDegrees(startLon, startLat, 0);
+        const newPosition = Cesium.Cartesian3.fromDegrees(startLon, startLat, BIKE_HEIGHT);
         bike.position = newPosition.clone();
         bike.billboard.position = newPosition;
       }
@@ -1008,4 +1011,3 @@ export const focusOnBikes = (viewer) => {
   // 飞向单车分布区域
   flyToBikes(viewer, positions);
 };
-
