@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import * as cocossd from '@tensorflow-models/coco-ssd';
-import BikePositionManager from './bikePositionManager';
+import BikePositionManager from './BikePositionManager';
 import CameraManager from './CameraManager';
 
 class BikeDetection {

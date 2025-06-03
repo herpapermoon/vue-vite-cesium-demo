@@ -23,11 +23,11 @@ let roadNetwork = {} // 道路网络拓扑结构，用于连续移动
 let lastStateUpdateTime = Date.now() // 上次状态更新时间
 
 // 状态转换概率和时间间隔配置
-const STATE_TRANSITION = {
-  CHECK_INTERVAL: 5000,  // 检查状态转换的时间间隔（毫秒）
-  PARKED_TO_RIDING: 0.03, // 停车转为骑行的概率 (每次检查有3%概率转换)
-  RIDING_TO_PARKED: 0.05  // 骑行转为停车的概率 (每次检查有5%概率转换)
-};
+// const STATE_TRANSITION = {
+//   CHECK_INTERVAL: 5000,  // 检查状态转换的时间间隔（毫秒）
+//   PARKED_TO_RIDING: 0.03, // 停车转为骑行的概率 (每次检查有3%概率转换)
+//   RIDING_TO_PARKED: 0.05  // 骑行转为停车的概率 (每次检查有5%概率转换)
+// };
 
 /**
  * 校园单车状态枚举
@@ -597,162 +597,158 @@ const animatePrimitive = (primitive, pos) => {
  * 沿道路更新单车位置
  * @param {Object} bike - 单车对象
  */
-/**
- * 沿道路更新单车位置
- * @param {Object} bike - 单车对象
- */
-const updateBikePositionAlongRoad = (bike) => {
-  if (!bike || !bike.billboard || bike.status !== BikeStatus.RIDING || !bike.routeInfo) {
-    return;
-  }
-  
-  // 处理过渡动画
-  if (bike.routeInfo.transition) {
-    const { startTime, duration, startPos, endPos, segmentAfterTransition } = bike.routeInfo.transition;
-    const elapsed = (Date.now() - startTime) / 1000; // 经过的秒数
-    const progress = Math.min(elapsed / duration, 1);
-    
-    if (progress < 1) {
-      // 在起点和终点之间进行线性插值
-      const [newLon, newLat] = interpolatePosition(startPos, endPos, progress);
-      
-      // 更新位置
-      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
-      bike.position = newPosition.clone();
-      bike.billboard.position = newPosition;
-      bike.longitude = newLon;
-      bike.latitude = newLat;
-      
-      return;
-    } else {
-      // 过渡完成，开始新的线段移动
-      delete bike.routeInfo.transition;
-      if (segmentAfterTransition) {
-        bike.routeInfo.currentSegment = segmentAfterTransition.segment;
-        bike.routeInfo.direction = segmentAfterTransition.direction;
-        bike.routeInfo.progress = segmentAfterTransition.startProgress;
-        
-        // 更新目标列表，避免走回头路
-        if (!bike.routeInfo.visitedSegments) {
-          bike.routeInfo.visitedSegments = new Set();
-        }
-        bike.routeInfo.visitedSegments.add(segmentAfterTransition.segment.id);
-      }
-    }
-  }
-  
-  const { currentSegment, progress, speed, direction, visitedSegments } = bike.routeInfo;
-  
-  // 更新进度
-  let newProgress = progress + speed * direction;
-  
-  // 如果到达线段终点或起点，让单车停车
-  if ((newProgress >= 1 && direction === 1) || (newProgress <= 0 && direction === -1)) {
-    // 当前位置
-    const currentPos = direction === 1 ? currentSegment.end : currentSegment.start;
-    
-    // 在当前位置附近随机选择一个点停车
-    const randomOffset = 0.00005 + Math.random() * 0.0001; // 约5-15米的随机偏移
-    const randomAngle = Math.random() * Math.PI * 2; // 随机角度
-    
-    const stopLon = currentPos[0] + randomOffset * Math.cos(randomAngle);
-    const stopLat = currentPos[1] + randomOffset * Math.sin(randomAngle);
-    
-    // 更新位置
-    const newPosition = Cesium.Cartesian3.fromDegrees(stopLon, stopLat, BIKE_HEIGHT);
-    bike.position = newPosition.clone();
-    bike.billboard.position = newPosition;
-    bike.longitude = stopLon;
-    bike.latitude = stopLat;
-    
-    // 更新状态为停车
-    bike.status = BikeStatus.PARKED;
-    bike.lastUpdated = Date.now();
-    bike.billboard.image = getIconByStatus(BikeStatus.PARKED);
-    
-    // 删除路径信息
-    delete bike.routeInfo;
-    
-    // 触发一辆停车状态的单车开始骑行
-    startRandomParkedBike();
-    
-    return;
-  }
-  
-  bike.routeInfo.progress = newProgress;
-  
-  // 计算新位置
-  const [startLon, startLat] = currentSegment.start;
-  const [endLon, endLat] = currentSegment.end;
-  
-  const newLon = startLon + newProgress * (endLon - startLon);
-  const newLat = startLat + newProgress * (endLat - startLat);
-  
-  // 更新位置
-  const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
-  bike.position = newPosition.clone();
-  bike.billboard.position = newPosition;
-  bike.longitude = newLon;
-  bike.latitude = newLat;
-};
+// const updateBikePositionAlongRoad = (bike) => {
+//   if (!bike || !bike.billboard || bike.status !== BikeStatus.RIDING || !bike.routeInfo) {
+//     return;
+//   }
+//   
+//   // 处理过渡动画
+//   if (bike.routeInfo.transition) {
+//     const { startTime, duration, startPos, endPos, segmentAfterTransition } = bike.routeInfo.transition;
+//     const elapsed = (Date.now() - startTime) / 1000; // 经过的秒数
+//     const progress = Math.min(elapsed / duration, 1);
+//     
+//     if (progress < 1) {
+//       // 在起点和终点之间进行线性插值
+//       const [newLon, newLat] = interpolatePosition(startPos, endPos, progress);
+//       
+//       // 更新位置
+//       const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
+//       bike.position = newPosition.clone();
+//       bike.billboard.position = newPosition;
+//       bike.longitude = newLon;
+//       bike.latitude = newLat;
+//       
+//       return;
+//     } else {
+//       // 过渡完成，开始新的线段移动
+//       delete bike.routeInfo.transition;
+//       if (segmentAfterTransition) {
+//         bike.routeInfo.currentSegment = segmentAfterTransition.segment;
+//         bike.routeInfo.direction = segmentAfterTransition.direction;
+//         bike.routeInfo.progress = segmentAfterTransition.startProgress;
+//         
+//         // 更新目标列表，避免走回头路
+//         if (!bike.routeInfo.visitedSegments) {
+//           bike.routeInfo.visitedSegments = new Set();
+//         }
+//         bike.routeInfo.visitedSegments.add(segmentAfterTransition.segment.id);
+//       }
+//     }
+//   }
+//   
+//   const { currentSegment, progress, speed, direction, visitedSegments } = bike.routeInfo;
+//   
+//   // 更新进度
+//   let newProgress = progress + speed * direction;
+//   
+//   // 如果到达线段终点或起点，让单车停车
+//   if ((newProgress >= 1 && direction === 1) || (newProgress <= 0 && direction === -1)) {
+//     // 当前位置
+//     const currentPos = direction === 1 ? currentSegment.end : currentSegment.start;
+//     
+//     // 在当前位置附近随机选择一个点停车
+//     const randomOffset = 0.00005 + Math.random() * 0.0001; // 约5-15米的随机偏移
+//     const randomAngle = Math.random() * Math.PI * 2; // 随机角度
+//     
+//     const stopLon = currentPos[0] + randomOffset * Math.cos(randomAngle);
+//     const stopLat = currentPos[1] + randomOffset * Math.sin(randomAngle);
+//     
+//     // 更新位置
+//     const newPosition = Cesium.Cartesian3.fromDegrees(stopLon, stopLat, BIKE_HEIGHT);
+//     bike.position = newPosition.clone();
+//     bike.billboard.position = newPosition;
+//     bike.longitude = stopLon;
+//     bike.latitude = stopLat;
+//     
+//     // 更新状态为停车
+//     bike.status = BikeStatus.PARKED;
+//     bike.lastUpdated = Date.now();
+//     bike.billboard.image = getIconByStatus(BikeStatus.PARKED);
+//     
+//     // 删除路径信息
+//     delete bike.routeInfo;
+//     
+//     // 触发一辆停车状态的单车开始骑行
+//     startRandomParkedBike();
+//     
+//     return;
+//   }
+//   
+//   bike.routeInfo.progress = newProgress;
+//   
+//   // 计算新位置
+//   const [startLon, startLat] = currentSegment.start;
+//   const [endLon, endLat] = currentSegment.end;
+//   
+//   const newLon = startLon + newProgress * (endLon - startLon);
+//   const newLat = startLat + newProgress * (endLat - startLat);
+//   
+//   // 更新位置
+//   const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
+//   bike.position = newPosition.clone();
+//   bike.billboard.position = newPosition;
+//   bike.longitude = newLon;
+//   bike.latitude = newLat;
+// };
 /**
  * 随机选择一辆停车状态的单车开始骑行
  */
-const startRandomParkedBike = () => {
-  // 获取所有停车状态的单车
-  const parkedBikes = bikesData.filter(bike => bike.status === BikeStatus.PARKED);
-  
-  // 如果没有停车状态的单车，直接返回
-  if (parkedBikes.length === 0) {
-    return;
-  }
-  
-  // 随机选择一辆单车
-  const randomBike = parkedBikes[Math.floor(Math.random() * parkedBikes.length)];
-  
-  // 查找最近的道路线段
-  const nearestRoad = findNearestRoadSegment([randomBike.longitude, randomBike.latitude]);
-  
-  // 如果找到了合适的道路线段
-  if (nearestRoad && nearestRoad.distance < 100) { // 只有在道路100米范围内才开始骑行
-    // 获取线段和投影点信息
-    const { segment, point, progress } = nearestRoad;
-    
-    // 随机决定方向
-    const direction = Math.random() > 0.5 ? 1 : -1;
-    
-    // 更新状态为骑行
-    randomBike.status = BikeStatus.RIDING;
-    randomBike.lastUpdated = Date.now();
-    
-    // 更新图标
-    if (randomBike.billboard) {
-      randomBike.billboard.image = getIconByStatus(BikeStatus.RIDING);
-    }
-    
-    // 创建路径信息
-    randomBike.routeInfo = {
-      currentSegment: segment,
-      progress: progress,
-      speed: 0.001 + Math.random() * 0.002, // 随机速度
-      direction: direction,
-      visitedSegments: new Set([segment.id]) // 记录当前线段为已访问
-    };
-    
-    // 设置平滑过渡到道路上
-    randomBike.routeInfo.transition = {
-      startTime: Date.now(),
-      duration: 2.0, // 2秒过渡
-      startPos: [randomBike.longitude, randomBike.latitude],
-      endPos: point,
-      segmentAfterTransition: {
-        segment: segment,
-        direction: direction,
-        startProgress: progress
-      }
-    };
-  }
-};
+// const startRandomParkedBike = () => {
+//   // 获取所有停车状态的单车
+//   const parkedBikes = bikesData.filter(bike => bike.status === BikeStatus.PARKED);
+//   
+//   // 如果没有停车状态的单车，直接返回
+//   if (parkedBikes.length === 0) {
+//     return;
+//   }
+//   
+//   // 随机选择一辆单车
+//   const randomBike = parkedBikes[Math.floor(Math.random() * parkedBikes.length)];
+//   
+//   // 查找最近的道路线段
+//   const nearestRoad = findNearestRoadSegment([randomBike.longitude, randomBike.latitude]);
+//   
+//   // 如果找到了合适的道路线段
+//   if (nearestRoad && nearestRoad.distance < 100) { // 只有在道路100米范围内才开始骑行
+//     // 获取线段和投影点信息
+//     const { segment, point, progress } = nearestRoad;
+//     
+//     // 随机决定方向
+//     const direction = Math.random() > 0.5 ? 1 : -1;
+//     
+//     // 更新状态为骑行
+//     randomBike.status = BikeStatus.RIDING;
+//     randomBike.lastUpdated = Date.now();
+//     
+//     // 更新图标
+//     if (randomBike.billboard) {
+//       randomBike.billboard.image = getIconByStatus(BikeStatus.RIDING);
+//     }
+//     
+//     // 创建路径信息
+//     randomBike.routeInfo = {
+//       currentSegment: segment,
+//       progress: progress,
+//       speed: 0.001 + Math.random() * 0.002, // 随机速度
+//       direction: direction,
+//       visitedSegments: new Set([segment.id]) // 记录当前线段为已访问
+//     };
+//     
+//     // 设置平滑过渡到道路上
+//     randomBike.routeInfo.transition = {
+//       startTime: Date.now(),
+//       duration: 2.0, // 2秒过渡
+//       startPos: [randomBike.longitude, randomBike.latitude],
+//       endPos: point,
+//       segmentAfterTransition: {
+//         segment: segment,
+//         direction: direction,
+//         startProgress: progress
+//       }
+//     };
+//   }
+// };
 /**
  * 处理单车状态自动转换
  * 停车→骑行或骑行→停车
@@ -941,25 +937,15 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
   bikesData = [];
   lastStateUpdateTime = Date.now();
 
-  // 状态分布比例: 85% 停车，15% 骑行
-  const statusDistribution = [
-    { status: BikeStatus.PARKED, probability: 0.85 },
-    { status: BikeStatus.RIDING, probability: 0.15 }
-  ];
+  // 状态分布比例: 100% 停车，0% 骑行
+  // const statusDistribution = [
+  //   { status: BikeStatus.PARKED, probability: 0.85 },
+  //   { status: BikeStatus.RIDING, probability: 0.15 }
+  // ];
 
   posArr.forEach((position, index) => {
-    // 根据概率分配状态
-    const rand = Math.random();
-    let cumulativeProbability = 0;
-    let randomStatus = BikeStatus.PARKED; // 默认状态
-    
-    for (const item of statusDistribution) {
-      cumulativeProbability += item.probability;
-      if (rand <= cumulativeProbability) {
-        randomStatus = item.status;
-        break;
-      }
-    }
+    // 所有单车都设置为停车状态
+    const randomStatus = BikeStatus.PARKED;
     
     // 根据状态选择图标
     const iconImage = getIconByStatus(randomStatus);
@@ -992,49 +978,54 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
       modelType: `Model-${String.fromCharCode(65 + Math.floor(Math.random() * 5))}` // 随机型号A-E
     };
     
-    // 如果是骑行状态，添加路径信息
-    if (randomStatus === BikeStatus.RIDING) {
-      // 使用道路线段来移动
-      const roadSegment = getRandomRoadSegment();
-      if (roadSegment) {
-        bikeInfo.routeInfo = {
-          currentSegment: roadSegment,
-          progress: Math.random(), // 随机起始进度
-          speed: 0.001 + Math.random() * 0.002, // 降低速度，使移动更平滑
-          direction: Math.random() > 0.5 ? 1 : -1, // 随机方向
-          visitedSegments: new Set([roadSegment.id]) // 记录已访问的线段
-        };
-        
-        // 将位置更新为线段上的位置
-        const [startLon, startLat] = roadSegment.start;
-        const [endLon, endLat] = roadSegment.end;
-        const progress = bikeInfo.routeInfo.progress;
-        
-        bikeInfo.longitude = startLon + progress * (endLon - startLon);
-        bikeInfo.latitude = startLat + progress * (endLat - startLat);
-        
-        const newPosition = Cesium.Cartesian3.fromDegrees(bikeInfo.longitude, bikeInfo.latitude, BIKE_HEIGHT);
-        bikeInfo.position = newPosition.clone();
-        bikeInfo.billboard.position = newPosition;
-      }
-    }
+    // 注释掉骑行状态的路径信息
+    // if (randomStatus === BikeStatus.RIDING) {
+    //   // 使用道路线段来移动
+    //   const roadSegment = getRandomRoadSegment();
+    //   if (roadSegment) {
+    //     bikeInfo.routeInfo = {
+    //       currentSegment: roadSegment,
+    //       progress: Math.random(), // 随机起始进度
+    //       speed: 0.001 + Math.random() * 0.002, // 降低速度，使移动更平滑
+    //       direction: Math.random() > 0.5 ? 1 : -1, // 随机方向
+    //       visitedSegments: new Set([roadSegment.id]) // 记录已访问的线段
+    //     };
+    //     
+    //     // 将位置更新为线段上的位置
+    //     const [startLon, startLat] = roadSegment.start;
+    //     const [endLon, endLat] = roadSegment.end;
+    //     const progress = bikeInfo.routeInfo.progress;
+    //     
+    //     bikeInfo.longitude = startLon + progress * (endLon - startLon);
+    //     bikeInfo.latitude = startLat + progress * (endLat - startLat);
+    //     
+    //     const newPosition = Cesium.Cartesian3.fromDegrees(bikeInfo.longitude, bikeInfo.latitude, BIKE_HEIGHT);
+    //     bikeInfo.position = newPosition.clone();
+    //     bikeInfo.billboard.position = newPosition;
+    //   }
+    // }
     
     // 添加到存储
     bikesData.push(bikeInfo);
   });
   
-  // 设置预渲染事件，更新骑行中的单车位置和处理状态转换
+  // 注释掉预渲染事件处理，或者保留一个空的处理函数
+  // preRender = viewer.scene.preRender.addEventListener(() => {
+  //   // 更新单车状态（停车→骑行、骑行→停车）
+  //   updateBikeStates();
+  //   
+  //   // 获取所有骑行中的单车
+  //   const ridingBikes = bikesData.filter(bike => bike.status === BikeStatus.RIDING);
+  //   
+  //   // 更新每辆骑行中单车的位置
+  //   ridingBikes.forEach(bike => {
+  //     updateBikePositionAlongRoad(bike);
+  //   });
+  // });
+  
+  // 可以保留一个空的预渲染事件，以便将来恢复功能
   preRender = viewer.scene.preRender.addEventListener(() => {
-    // 更新单车状态（停车→骑行、骑行→停车）
-    updateBikeStates();
-    
-    // 获取所有骑行中的单车
-    const ridingBikes = bikesData.filter(bike => bike.status === BikeStatus.RIDING);
-    
-    // 更新每辆骑行中单车的位置
-    ridingBikes.forEach(bike => {
-      updateBikePositionAlongRoad(bike);
-    });
+    // 单车保持静止状态，不执行任何更新
   });
   
   // 初始化BikeStore
@@ -1057,9 +1048,14 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
   // 自动调整摄像机位置
   flyToBikes(viewer, posArr);
   
-  console.log(`成功创建${bikesData.length}个校园单车数据点`);
+  console.log(`成功创建${bikesData.length}个校园单车数据点 (全部为停车状态)`);
   return bikesData;
 };
+
+// 【新增】：导出billboards以便外部访问 - 用于车位停车逻辑
+if (typeof window !== 'undefined') {
+  window.bikeBillboards = billboards;
+}
 
 /**
  * 销毁校园单车图元
