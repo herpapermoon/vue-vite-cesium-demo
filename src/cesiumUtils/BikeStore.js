@@ -11,6 +11,22 @@ class BikeStore {
     this.users = [];
     this.trips = [];
     this.stations = [];
+    
+    // 视觉检测相关数据
+    this.detectedBikes = new Map(); // 当前帧检测到的单车
+    this.previousDetectedBikes = new Map(); // 上一帧检测到的单车
+    this.bikeTrackingInfo = new Map(); // 单车追踪信息
+    this.bikeHistory = new Map(); // 单车历史位置
+    this.detectionStats = {
+      total: 0,
+      lastUpdate: null,
+      history: [],
+      types: {
+        bicycle: 0,
+        motorcycle: 0,
+        unknown: 0
+      }
+    };
   }
 
   /**
@@ -210,13 +226,220 @@ class BikeStore {
     const total = this.bikes.length;
     const parked = this.getBikesByStatus('parked').length;
     const riding = this.getBikesByStatus('riding').length;
+    const detected = this.detectedBikes.size;
     
+    // 合并检测统计和数据库统计
     return {
-      total,
+      total: total + detected, // 总数包括数据库中的和检测到的
       parked,
       riding,
-      utilizationRate: total > 0 ? ((riding / total) * 100).toFixed(2) : 0
+      detected,
+      utilizationRate: total > 0 ? ((riding / total) * 100).toFixed(2) : 0,
+      types: this.detectionStats.types
     };
+  }
+
+  // ===== 以下是视觉检测相关方法 =====
+
+  /**
+   * 清除视觉检测相关的临时数据
+   */
+  clearDetectionData() {
+    this.detectedBikes.clear();
+    this.previousDetectedBikes.clear();
+    this.bikeTrackingInfo.clear();
+    this.detectionStats = {
+      total: 0,
+      lastUpdate: null,
+      history: [],
+      types: {
+        bicycle: 0,
+        motorcycle: 0,
+        unknown: 0
+      }
+    };
+  }
+
+  /**
+   * 更新检测到的单车
+   * @param {string} id - 单车ID
+   * @param {Object} bikeData - 单车数据
+   */
+  updateDetectedBike(id, bikeData) {
+    this.detectedBikes.set(id, bikeData);
+    
+    // 更新统计信息
+    this.detectionStats.total = this.detectedBikes.size;
+    this.detectionStats.lastUpdate = Date.now();
+    
+    // 更新类型统计
+    const type = bikeData.type || 'unknown';
+    if (type === 'bicycle' || type === 'motorcycle') {
+      this.detectionStats.types[type] = (this.detectionStats.types[type] || 0) + 1;
+    } else {
+      this.detectionStats.types.unknown = (this.detectionStats.types.unknown || 0) + 1;
+    }
+    
+    // 更新历史位置
+    this.updateBikeHistoryPosition(id, bikeData);
+  }
+
+  /**
+   * 批量更新检测到的单车
+   * @param {Array} bikes - 单车数据数组
+   */
+  updateDetectedBikes(bikes) {
+    // 重置类型统计
+    this.detectionStats.types = {
+      bicycle: 0,
+      motorcycle: 0,
+      unknown: 0
+    };
+    
+    // 批量更新
+    bikes.forEach(bike => {
+      this.updateDetectedBike(bike.id, bike);
+    });
+  }
+
+  /**
+   * 保存当前检测结果到上一帧
+   */
+  savePreviousDetections() {
+    this.previousDetectedBikes = new Map(this.detectedBikes);
+  }
+
+  /**
+   * 清除当前检测结果
+   */
+  clearCurrentDetections() {
+    this.detectedBikes.clear();
+  }
+
+  /**
+   * 获取上一帧检测到的单车
+   * @returns {Map} 上一帧单车Map
+   */
+  getPreviousDetectedBikes() {
+    return this.previousDetectedBikes;
+  }
+
+  /**
+   * 获取单车追踪信息
+   * @returns {Map} 单车追踪信息Map
+   */
+  getBikeTrackingInfo() {
+    return this.bikeTrackingInfo;
+  }
+
+  /**
+   * 更新单车追踪信息
+   * @param {string} id - 单车ID
+   * @param {Object} trackInfo - 追踪信息
+   */
+  updateBikeTrackingInfo(id, trackInfo) {
+    this.bikeTrackingInfo.set(id, trackInfo);
+    
+    // 同步更新到主数据库
+    // 检查是否已存在于bikes数组中
+    const existingIndex = this.bikes.findIndex(bike => bike.id === id);
+    if (existingIndex === -1) {
+      // 如果不存在，添加新记录
+      const lastPosition = trackInfo.positions[trackInfo.positions.length - 1];
+      if (lastPosition && lastPosition.longitude && lastPosition.latitude) {
+        this.bikes.push({
+          id,
+          type: trackInfo.type || 'unknown',
+          status: 'detected',
+          longitude: lastPosition.longitude,
+          latitude: lastPosition.latitude,
+          height: lastPosition.height || 1.5,
+          firstSeen: trackInfo.firstSeen,
+          lastUpdated: trackInfo.lastSeen
+        });
+      }
+    } else {
+      // 如果已存在，更新信息
+      const lastPosition = trackInfo.positions[trackInfo.positions.length - 1];
+      if (lastPosition && lastPosition.longitude && lastPosition.latitude) {
+        this.bikes[existingIndex].longitude = lastPosition.longitude;
+        this.bikes[existingIndex].latitude = lastPosition.latitude;
+        this.bikes[existingIndex].height = lastPosition.height || 1.5;
+        this.bikes[existingIndex].lastUpdated = trackInfo.lastSeen;
+      }
+    }
+  }
+
+  /**
+   * 移除单车追踪
+   * @param {string} id - 单车ID
+   */
+  removeBikeTracking(id) {
+    this.bikeTrackingInfo.delete(id);
+  }
+
+  /**
+   * 更新单车历史位置
+   * @param {string} id - 单车ID
+   * @param {Object} position - 位置信息
+   */
+  updateBikeHistoryPosition(id, position) {
+    if (!this.bikeHistory.has(id)) {
+      this.bikeHistory.set(id, []);
+    }
+    
+    const history = this.bikeHistory.get(id);
+    history.push({...position, timestamp: Date.now()});
+    
+    // 限制历史记录数量
+    if (history.length > 100) {
+      history.shift();
+    }
+  }
+
+  /**
+   * 获取单车历史位置
+   * @param {string} id - 单车ID
+   * @returns {Array} 历史位置数组
+   */
+  getBikeHistory(id) {
+    return this.bikeHistory.get(id) || [];
+  }
+
+  /**
+   * 移除单车
+   * @param {string} id - 单车ID
+   */
+  removeBike(id) {
+    // 从bikes数组中移除
+    const index = this.bikes.findIndex(bike => bike.id === id);
+    if (index !== -1) {
+      this.bikes.splice(index, 1);
+    }
+    
+    // 移除检测数据
+    this.detectedBikes.delete(id);
+    this.previousDetectedBikes.delete(id);
+    this.bikeTrackingInfo.delete(id);
+    this.bikeHistory.delete(id);
+  }
+
+  /**
+   * 记录检测统计历史
+   */
+  recordDetectionStats() {
+    const stats = {
+      timestamp: Date.now(),
+      total: this.detectionStats.total,
+      types: { ...this.detectionStats.types }
+    };
+    
+    this.detectionStats.history.push(stats);
+    
+    // 限制历史记录数量
+    if (this.detectionStats.history.length > 100) {
+      this.detectionStats.history.shift();
+    }
   }
 }
 

@@ -360,7 +360,7 @@ class CameraManager {
       if (!this.isValidNumber(x) || !this.isValidNumber(y) || 
           !this.isValidNumber(videoWidth) || !this.isValidNumber(videoHeight) ||
           !this.isValidNumber(estimatedDistance) ||
-          videoWidth <= 0 || videoHeight <= 0) {
+          videoWidth <= 0 || videoHeight <= 0 || estimatedDistance <= 0) {
         console.warn('像素坐标转换参数无效:', { x, y, videoWidth, videoHeight, estimatedDistance });
         return null;
       }
@@ -373,7 +373,8 @@ class CameraManager {
       if (!this.isValidNumber(longitude) || !this.isValidNumber(latitude) ||
           !this.isValidNumber(height) || !this.isValidNumber(heading) ||
           !this.isValidNumber(pitch) || !this.isValidNumber(roll) ||
-          !this.isValidNumber(horizontalFOV) || !this.isValidNumber(verticalFOV)) {
+          !this.isValidNumber(horizontalFOV) || !this.isValidNumber(verticalFOV) ||
+          Math.abs(longitude) > 180 || Math.abs(latitude) > 90) {
         console.warn('摄像头参数无效:', { 
           position: [longitude, latitude, height],
           direction: [heading, pitch, roll],
@@ -387,13 +388,31 @@ class CameraManager {
       const pixelX = x - videoWidth / 2;
       const pixelY = videoHeight / 2 - y; // 反转Y轴，使上为正方向
       
+      // 安全检查：确保像素坐标不会导致除以零
+      if (Math.abs(videoWidth) < 0.001 || Math.abs(videoHeight) < 0.001) {
+        console.warn('视频尺寸太小,无法计算:', { videoWidth, videoHeight });
+        return null;
+      }
+      
       // 计算角度偏移
       const angleX = (pixelX / videoWidth) * Cesium.Math.toRadians(horizontalFOV);
       const angleY = (pixelY / videoHeight) * Cesium.Math.toRadians(verticalFOV);
       
+      // 验证角度有效
+      if (!this.isValidNumber(angleX) || !this.isValidNumber(angleY)) {
+        console.warn('计算角度偏移无效:', { angleX, angleY, pixelX, pixelY });
+        return null;
+      }
+      
       // 计算实际方向角度
       const headingRad = Cesium.Math.toRadians(heading) + angleX;
       const pitchRad = Cesium.Math.toRadians(pitch) + angleY;
+      
+      // 验证角度有效
+      if (!this.isValidNumber(headingRad) || !this.isValidNumber(pitchRad)) {
+        console.warn('计算方向角度无效:', { headingRad, pitchRad });
+        return null;
+      }
       
       // 计算3D位置偏移
       const horizontalDistance = estimatedDistance * Math.cos(pitchRad);
@@ -406,16 +425,31 @@ class CameraManager {
       }
       
       // 计算经纬度偏移
+      const cosLat = Math.cos(Cesium.Math.toRadians(latitude));
+      // 避免除以零或非常小的值
+      if (Math.abs(cosLat) < 0.001) {
+        console.warn('纬度接近极点，无法准确计算经度偏移:', latitude);
+        return null;
+      }
+      
       const latFactor = 1.0 / 111000.0; // 大约每111km对应1度纬度
-      const lonFactor = 1.0 / (111000.0 * Math.cos(Cesium.Math.toRadians(latitude))); // 经度因子
+      const lonFactor = 1.0 / (111000.0 * cosLat); // 经度因子
+      
+      // 验证因子
+      if (!this.isValidNumber(latFactor) || !this.isValidNumber(lonFactor) || 
+          Math.abs(lonFactor) > 1.0) { // 经度因子在极点附近会变得非常大
+        console.warn('坐标换算因子无效:', { latFactor, lonFactor, cosLat });
+        return null;
+      }
       
       const endLon = longitude + horizontalDistance * Math.sin(headingRad) * lonFactor;
       const endLat = latitude + horizontalDistance * Math.cos(headingRad) * latFactor;
       const endHeight = height + verticalDistance;
       
-      // 最终验证计算结果
-      if (!this.isValidNumber(endLon) || !this.isValidNumber(endLat) || !this.isValidNumber(endHeight)) {
-        console.warn('计算结果无效:', { endLon, endLat, endHeight });
+      // 最终验证计算结果并确保在合理范围内
+      if (!this.isValidNumber(endLon) || !this.isValidNumber(endLat) || !this.isValidNumber(endHeight) ||
+          Math.abs(endLon) > 180 || Math.abs(endLat) > 90) {
+        console.warn('计算结果无效或超出地球范围:', { endLon, endLat, endHeight });
         return null;
       }
       

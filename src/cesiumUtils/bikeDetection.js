@@ -2,6 +2,8 @@ import * as tf from '@tensorflow/tfjs';
 import * as cocossd from '@tensorflow-models/coco-ssd';
 import BikePositionManager from './BikePositionManager';
 import CameraManager from './CameraManager';
+// 导入BikeStore单例
+import bikeStore from './BikeStore';
 
 class BikeDetection {
   constructor(viewer) {
@@ -17,9 +19,9 @@ class BikeDetection {
     this.bikePositionManager = new BikePositionManager(viewer, this.cameraManager);
     
     this.detectInterval = null;
-    this.detectedBikes = new Map(); // 存储检测到的单车ID和位置
-    this.previousBikes = new Map(); // 存储上一帧检测到的单车
-    this.bikeTrackingInfo = new Map(); // 存储单车追踪信息，包括ID和历史位置
+    
+    // 使用bikeStore替代本地存储
+    // detectedBikes、previousBikes、bikeTrackingInfo将通过bikeStore处理
     this.nextTrackingId = 1; // 跟踪ID计数器
     this.bikeDisappearTimeout = 10; // 单车消失多少帧后移除跟踪，单位：帧数，放宽到10帧
     this.maxTrackingDistance = 150; // 最大追踪距离，单位：像素，放宽到150像素
@@ -169,11 +171,11 @@ class BikeDetection {
     this.isRunning = true;
     this.resizeCanvas();
     
-    // 先清空检测结果，并发送初始值0
-    this.detectedBikes.clear();
-    this.previousBikes.clear();
-    this.bikeTrackingInfo.clear();
+    // 重置检测状态
     this.nextTrackingId = 1;
+    // 清除BikeStore中与视觉检测相关的临时数据
+    bikeStore.clearDetectionData();
+    // 发送初始值0
     this.emit('detection', { count: 0, bikes: [] });
     
     // 开始定期检测
@@ -205,9 +207,7 @@ class BikeDetection {
     }
     
     // 清除地图上的实体
-    this.detectedBikes.clear();
-    this.previousBikes.clear();
-    this.bikeTrackingInfo.clear();
+    bikeStore.clearDetectionData();
     this.bikePositionManager.clearAllBikes();
     
     // 发送检测停止事件
@@ -293,8 +293,12 @@ class BikeDetection {
     const matchedBikes = new Map();
     const unmatched = [...currentBikes];
     
+    // 从BikeStore获取之前检测到的单车数据
+    const previousBikes = bikeStore.getPreviousDetectedBikes();
+    const trackingInfo = bikeStore.getBikeTrackingInfo();
+    
     // 如果是第一帧或前一帧没有单车，则所有单车都是新的
-    if (this.previousBikes.size === 0) {
+    if (previousBikes.size === 0) {
       return { matchedBikes, unmatched };
     }
     
@@ -317,8 +321,8 @@ class BikeDetection {
       let bestScore = -1;
       let bestTrackingId = null;
       
-      // 遍历前一帧中的所有单车
-      for (const [trackingId, prevBike] of this.bikeTrackingInfo.entries()) {
+      // 遍历已追踪的单车
+      for (const [trackingId, prevBike] of trackingInfo.entries()) {
         // 如果单车已经消失了设定的帧数，则不再考虑匹配
         if (prevBike.missedFrames > this.bikeDisappearTimeout) continue;
         
@@ -408,9 +412,12 @@ class BikeDetection {
 
   // 更新跟踪信息
   updateTrackingInfo(matchedBikes, newBikes) {
+    const trackingInfo = bikeStore.getBikeTrackingInfo();
+    const now = Date.now();
+    
     // 更新已匹配单车的信息
     for (const [trackingId, bikeData] of matchedBikes.entries()) {
-      const trackInfo = this.bikeTrackingInfo.get(trackingId);
+      const trackInfo = trackingInfo.get(trackingId);
       if (trackInfo) {
         // 更新位置历史
         trackInfo.positions.push({...bikeData});
@@ -421,7 +428,10 @@ class BikeDetection {
         // 重置消失计数
         trackInfo.missedFrames = 0;
         // 更新最后出现时间
-        trackInfo.lastSeen = Date.now();
+        trackInfo.lastSeen = now;
+        
+        // 更新BikeStore中的跟踪信息
+        bikeStore.updateBikeTrackingInfo(trackingId, trackInfo);
       }
     }
     
@@ -435,29 +445,34 @@ class BikeDetection {
       }
       
       const trackingId = `bike-${this.nextTrackingId++}`;
-      this.bikeTrackingInfo.set(trackingId, {
+      const newTrackInfo = {
         positions: [{...newBike}],
-        firstSeen: Date.now(),
-        lastSeen: Date.now(),
+        firstSeen: now,
+        lastSeen: now,
         missedFrames: 0,
         type: newBike.type
-      });
+      };
+      
+      // 将新的跟踪信息保存到BikeStore
+      bikeStore.updateBikeTrackingInfo(trackingId, newTrackInfo);
+      
       // 添加到匹配结果中
       matchedBikes.set(trackingId, newBike);
     }
     
     // 更新未在当前帧中出现的单车的消失计数
-    for (const [trackingId, trackInfo] of this.bikeTrackingInfo.entries()) {
+    for (const [trackingId, trackInfo] of trackingInfo.entries()) {
       if (!matchedBikes.has(trackingId)) {
         trackInfo.missedFrames += 1;
+        bikeStore.updateBikeTrackingInfo(trackingId, trackInfo);
       }
     }
     
     // 清理长时间未被检测到的单车
-    for (const [trackingId, trackInfo] of this.bikeTrackingInfo.entries()) {
+    for (const [trackingId, trackInfo] of trackingInfo.entries()) {
       if (trackInfo.missedFrames > this.bikeDisappearTimeout) {
         // 单车已经消失太久，从跟踪列表中移除
-        this.bikeTrackingInfo.delete(trackingId);
+        bikeStore.removeBikeTracking(trackingId);
       }
     }
     
@@ -529,8 +544,8 @@ class BikeDetection {
       // 更新跟踪信息
       const trackedBikes = this.updateTrackingInfo(matchedBikes, unmatched);
       
-      // 清除当前帧的检测结果，准备更新
-      this.detectedBikes.clear();
+      // 清除当前帧的检测结果并保存到BikeStore中
+      bikeStore.clearCurrentDetections();
       
       // 绘制检测结果并更新检测到的单车
       const detectedItems = [];
@@ -577,12 +592,12 @@ class BikeDetection {
         
         detectedItems.push(bikeDataWithId);
         
-        // 更新单车位置
-        this.updateBikePosition(trackingId, bikeDataWithId);
+        // 将检测到的单车保存到BikeStore
+        bikeStore.updateDetectedBike(trackingId, bikeDataWithId);
       }
       
-      // 保存本次检测结果，用于下一帧的匹配
-      this.previousBikes = new Map(this.detectedBikes);
+      // 保存本次检测结果到BikeStore中，用于下一帧的匹配
+      bikeStore.savePreviousDetections();
       
       // 更新单车在地图上的位置
       if (this.cameraManager.getActiveCamera()) {
@@ -624,7 +639,7 @@ class BikeDetection {
     }
   }
 
-  // 更新单车位置信息
+  // 更新单车位置信息方法现在直接使用BikeStore存储
   updateBikePosition(id, bikeData) {
     try {
       // 验证单车数据
@@ -634,8 +649,8 @@ class BikeDetection {
         return;
       }
       
-      // 存储检测到的单车信息
-      this.detectedBikes.set(id, bikeData); 
+      // 存储检测到的单车信息到BikeStore中
+      bikeStore.updateDetectedBike(id, bikeData);
       console.log('检测到单车:', id, bikeData.type, `置信度: ${Math.round(bikeData.confidence * 100)}%`);
     } catch (error) {
       console.error('更新单车位置时出错:', error);
