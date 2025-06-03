@@ -565,8 +565,8 @@ const btnClickHandler = (btn) => {
       // 随机生成点标记
       caller(active, async () => {
         // 生成随机单车数据
-        await randomGenerateBillboards(viewer3D, 10000)
-        showNotification('地图更新', '已生成10000个随机节点', 'info')
+        await randomGenerateBillboards(viewer3D, 1000)
+        showNotification('地图更新', '已生成1000个随机节点', 'info')
         
         // 显示共享单车统计视图
         // 必须使用 nextTick 确保 UI 更新后再显示侧边栏

@@ -25,7 +25,7 @@ const addTileMapProvider = (viewer) => {
 export const initCesium = (viewerName = '3d') => {
   // DEFAULT_VIEW in China
   Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(80, 22, 130, 50)
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwMWI4NjEzMC1mMTUwLTRkYjItOTFmMC02YTQ3Nzc0NTQ4YjAiLCJpZCI6MjkzMTc2LCJpYXQiOjE3NDQzNjk4NTV9.kSLOXqOdJOAW28z0wxJaH7EnI21xucABvIDwiFzLj8U'
+  Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwMWI4NjEzMC1mMTUwLTRkYjItOTFmMC02YTQ3Nzc0NTQ4YjAiLCJpZCI6MjkzMTc2LCJpYXQiOjE3NDQzNjk4NTV9.kSLOXqOdJOAW28z0wxJaH7EnI21xucABvIDwiFzLj8U'
   // const url = '/geoserver' // Geoserver URL
   // const terrainUrl = '/terrain' // Terrain URL
   const is3D = viewerName === '3d'

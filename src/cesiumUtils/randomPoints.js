@@ -8,32 +8,39 @@ import ship4 from '@/assets/ships/ship4.png'
 // 单车图标资源数组
 const images = [ship0, ship1, ship2, ship3, ship4]
 
+// 单车高度（米）
+const BIKE_HEIGHT = 17;
+
 // 全局存储容器
 // let labels = []     // 标签集合 - 不再需要文字标签
 let billboards = [] // 广告牌集合
 // let lines = []      // 连线集合 - 不再需要动态连线
 let preRender       // 预渲染事件句柄 - 用于动态移动车辆
 let roadNetworkData = null // 道路网络数据
-let bikesData = [] // 共享单车数据存储
+let bikesData = [] // 校园单车数据存储
 let roadSegments = [] // 道路线段数据，用于移动车辆
 let roadNetwork = {} // 道路网络拓扑结构，用于连续移动
+let lastStateUpdateTime = Date.now() // 上次状态更新时间
+
+// 状态转换概率和时间间隔配置
+const STATE_TRANSITION = {
+  CHECK_INTERVAL: 5000,  // 检查状态转换的时间间隔（毫秒）
+  PARKED_TO_RIDING: 0.03, // 停车转为骑行的概率 (每次检查有3%概率转换)
+  RIDING_TO_PARKED: 0.05  // 骑行转为停车的概率 (每次检查有5%概率转换)
+};
 
 /**
- * 共享单车状态枚举
+ * 校园单车状态枚举
  */
 export const BikeStatus = {
-  AVAILABLE: 'available', // 可用
-  IN_USE: 'inUse',       // 使用中
-  MAINTENANCE: 'maintenance', // 维护中
-  LOW_BATTERY: 'lowBattery'   // 低电量
+  PARKED: 'parked',     // 停车状态
+  RIDING: 'riding'      // 骑行状态
 }
 
 // 状态对应的图标映射
 const statusIconMap = {
-  [BikeStatus.AVAILABLE]: ship0,    // 可使用状态 - ship0
-  [BikeStatus.IN_USE]: ship3,       // 使用中状态 - ship3
-  [BikeStatus.MAINTENANCE]: ship2,  // 维护中状态 - ship2
-  [BikeStatus.LOW_BATTERY]: ship1   // 低电量状态 - ship1
+  [BikeStatus.PARKED]: ship0,    // 停车状态 - ship0
+  [BikeStatus.RIDING]: ship3      // 骑行状态 - ship3
 }
 
 // 根据状态获取对应的图标
@@ -49,8 +56,8 @@ const loadRoadNetwork = async () => {
   if (roadNetworkData) return roadNetworkData;
   
   try {
-    // 使用 fetch 获取 GeoJSON 文件
-    const response = await fetch('/src/assets/ships/武汉.geojson');
+    // 使用 fetch 获取 GeoJSON 文件 - 修改为 wlcroad.geojson
+    const response = await fetch('/src/assets/ships/wlcroad.geojson');
     roadNetworkData = await response.json();
     
     // 提取道路线段供移动使用
@@ -72,17 +79,15 @@ const loadRoadNetwork = async () => {
 const extractRoadSegments = (roadNetwork) => {
   roadSegments = [];
   
-  // 按道路类型筛选重要道路
+  // 按道路类型筛选重要道路 - 修改为使用 fclass 属性筛选
   const mainRoads = roadNetwork.features.filter(feature => {
-    const highway = feature.properties.highway;
-    const waterway = feature.properties.waterway;
+    const fclass = feature.properties.fclass;
     return (
-      highway === 'trunk' || 
-      highway === 'primary' || 
-      highway === 'secondary' || 
-      highway === 'tertiary' ||
-      waterway === 'river' || 
-      waterway === 'canal'
+      fclass === 'residential' || 
+      fclass === 'living_street' || 
+      fclass === 'secondary' || 
+      fclass === 'tertiary' || 
+      fclass === 'footway'
     );
   });
   
@@ -95,15 +100,32 @@ const extractRoadSegments = (roadNetwork) => {
     // 获取道路坐标
     const coordinates = road.geometry.coordinates;
     
+    // 对于 MultiLineString 类型
+    if (road.geometry.type === 'MultiLineString') {
+      // 遍历每条线
+      coordinates.forEach((line, lineIndex) => {
+        for (let i = 0; i < line.length - 1; i++) {
+          const segmentId = `segment-${roadIndex}-${lineIndex}-${i}`;
+          roadSegments.push({
+            id: segmentId,
+            start: line[i],
+            end: line[i + 1],
+            roadId: road.properties.fid || `road-${roadIndex}`,
+            startNodeId: `node-${roadIndex}-${lineIndex}-${i}`,
+            endNodeId: `node-${roadIndex}-${lineIndex}-${i+1}`
+          });
+        }
+      });
+    }
     // 对于 LineString 类型
-    if (road.geometry.type === 'LineString') {
+    else if (road.geometry.type === 'LineString') {
       for (let i = 0; i < coordinates.length - 1; i++) {
         const segmentId = `segment-${roadIndex}-${i}`;
         roadSegments.push({
           id: segmentId,
           start: coordinates[i],
           end: coordinates[i + 1],
-          roadId: road.id || `road-${roadIndex}`,
+          roadId: road.properties.fid || `road-${roadIndex}`,
           startNodeId: `node-${roadIndex}-${i}`,
           endNodeId: `node-${roadIndex}-${i+1}`
         });
@@ -194,11 +216,18 @@ const getNextConnectedSegment = (currentSegment, direction) => {
     conn => conn.segmentId !== currentSegment.id
   );
   
-  if (availableConnections.length === 0) return null;
+  // 如果没有其他连接，允许在当前线段上掉头
+  if (availableConnections.length === 0) {
+    return {
+      segment: currentSegment,
+      direction: -direction, // 反向
+      startProgress: direction === 1 ? 1 : 0 // 从当前点开始反向
+    };
+  }
   
-  const randomConnection = availableConnections[
-    Math.floor(Math.random() * availableConnections.length)
-  ];
+  // 随机选择下一个连接，增加随机性
+  const randomIndex = Math.floor(Math.random() * availableConnections.length);
+  const randomConnection = availableConnections[randomIndex];
   
   // 找到对应的线段
   const nextSegment = roadSegments.find(seg => seg.id === randomConnection.segmentId);
@@ -239,13 +268,73 @@ const getRandomRoadSegment = () => {
 };
 
 /**
+ * 查找离给定点最近的道路线段
+ * @param {Array} point - 点坐标 [经度, 纬度]
+ * @returns {Object} 最近的线段和投影点信息
+ */
+const findNearestRoadSegment = (point) => {
+  if (roadSegments.length === 0) return null;
+  
+  let minDistance = Infinity;
+  let nearestSegment = null;
+  let projectionPoint = null;
+  let projectionProgress = 0;
+  
+  roadSegments.forEach(segment => {
+    const { start, end } = segment;
+    const [x, y] = point;
+    const [x1, y1] = start;
+    const [x2, y2] = end;
+    
+    // 计算线段长度的平方
+    const lengthSquared = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    
+    // 如果线段长度为0，直接计算到起点的距离
+    if (lengthSquared === 0) {
+      const distance = calculateDistance(point, start);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestSegment = segment;
+        projectionPoint = start;
+        projectionProgress = 0;
+      }
+      return;
+    }
+    
+    // 计算投影点的参数
+    const t = Math.max(0, Math.min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / lengthSquared));
+    
+    // 计算投影点坐标
+    const projX = x1 + t * (x2 - x1);
+    const projY = y1 + t * (y2 - y1);
+    
+    // 计算距离
+    const distance = calculateDistance([x, y], [projX, projY]);
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestSegment = segment;
+      projectionPoint = [projX, projY];
+      projectionProgress = t;
+    }
+  });
+  
+  return {
+    segment: nearestSegment,
+    point: projectionPoint,
+    progress: projectionProgress,
+    distance: minDistance
+  };
+};
+
+/**
  * 计算两点之间的距离（米）
  * @param {Array} point1 - 点1 [经度, 纬度]
  * @param {Array} point2 - 点2 [经度, 纬度]
  * @returns {number} 距离（米）
  */
 export const calculateDistance = (point1, point2) => {
-  const R = 6371000; // A地球半径（米）
+  const R = 6371000; // 地球半径（米）
   const [lon1, lat1] = point1;
   const [lon2, lat2] = point2;
   
@@ -297,22 +386,20 @@ const pointToLineDistance = (point, lineStart, lineEnd) => {
  * @param {Array} bounds - 边界 [minLon, minLat, maxLon, maxLat]
  * @returns {Array} 生成的点 [[lon, lat], ...]
  */
-const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistance = 100, bounds = [113.8, 30.2, 114.7, 30.8]) => {
+const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistance = 100, bounds = [114.605, 30.45, 114.62, 30.465]) => {
   const points = [];
   const features = roadNetwork.features;
   const [minLon, minLat, maxLon, maxLat] = bounds;
   
-  // 按道路类型筛选重要道路
+  // 按道路类型筛选道路 - 修改为使用 fclass 属性筛选
   const mainRoads = features.filter(feature => {
-    const highway = feature.properties.highway;
-    const waterway = feature.properties.waterway;
+    const fclass = feature.properties.fclass;
     return (
-      highway === 'trunk' || 
-      highway === 'primary' || 
-      highway === 'secondary' || 
-      highway === 'tertiary' ||
-      waterway === 'river' || 
-      waterway === 'canal'
+      fclass === 'residential' || 
+      fclass === 'living_street' || 
+      fclass === 'secondary' || 
+      fclass === 'tertiary' || 
+      fclass === 'footway'
     );
   });
   
@@ -333,8 +420,52 @@ const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistan
     // 获取道路坐标
     const coordinates = road.geometry.coordinates;
     
+    // 对于 MultiLineString 类型
+    if (road.geometry.type === 'MultiLineString') {
+      // 随机选择一条线
+      const lineIndex = Math.floor(Math.random() * coordinates.length);
+      const line = coordinates[lineIndex];
+      
+      // 随机选择线段
+      const segmentIndex = Math.floor(Math.random() * (line.length - 1));
+      const start = line[segmentIndex];
+      const end = line[segmentIndex + 1];
+      
+      // 在线段上随机选择一个点
+      const t = Math.random();
+      const baseX = start[0] + t * (end[0] - start[0]);
+      const baseY = start[1] + t * (end[1] - start[1]);
+      
+      // 计算垂直于线段的方向
+      const dx = end[0] - start[0];
+      const dy = end[1] - start[1];
+      const length = Math.sqrt(dx * dx + dy * dy);
+      
+      if (length === 0) continue;
+      
+      // 垂直向量
+      const perpX = -dy / length;
+      const perpY = dx / length;
+      
+      // 随机距离，在minDistance到maxDistance之间
+      const distance = minDistance + Math.random() * (maxDistance - minDistance);
+      
+      // 随机决定方向（左侧或右侧）
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      
+      // 计算最终点坐标
+      // 将距离从米转换为度（粗略估计：1度约等于111km）
+      const distanceDeg = distance / 111000;
+      const finalX = baseX + direction * perpX * distanceDeg;
+      const finalY = baseY + direction * perpY * distanceDeg;
+      
+      // 检查是否在边界内
+      if (finalX >= minLon && finalX <= maxLon && finalY >= minLat && finalY <= maxLat) {
+        points.push([finalX, finalY]);
+      }
+    }
     // 对于 LineString 类型
-    if (road.geometry.type === 'LineString') {
+    else if (road.geometry.type === 'LineString') {
       // 随机选择线段
       const segmentIndex = Math.floor(Math.random() * (coordinates.length - 1));
       const start = coordinates[segmentIndex];
@@ -379,12 +510,12 @@ const generatePointsNearRoads = (roadNetwork, count, minDistance = 10, maxDistan
 };
 
 /**
- * 生成限定在武汉市的随机坐标点，沿道路网分布
+ * 生成随机坐标点，沿道路网分布
  * @param {number} count - 生成的坐标点数量
  * @param {Array} center - 中心点坐标 [纬度, 经度, 高度]
  * @returns {Promise<Cesium.Cartesian3[]>} 三维笛卡尔坐标数组
  */
-const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
+const generatePos = async (count = 200, center = [30.457, 114.615, 0]) => {
   // 加载道路网络数据
   const roadNetwork = await loadRoadNetwork();
   
@@ -401,7 +532,7 @@ const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
     count, 
     10,  // 最小距离10米
     100, // 最大距离100米
-    [baseLon - 0.75, baseLat - 0.5, baseLon + 0.75, baseLat + 0.5] // 范围约束
+    [baseLon - 0.015, baseLat - 0.01, baseLon + 0.015, baseLat + 0.01] // 范围约束 - 已调整为wlcroad区域
   );
   
   // 如果生成的点不足，用随机点补充
@@ -410,14 +541,14 @@ const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
     const randomPoints = generateRandomPos(count - points.length, center);
     
     // 转换生成的路点为Cesium.Cartesian3
-    const roadPoints = points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH));
+    const roadPoints = points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH + BIKE_HEIGHT));
     
     // 合并道路点和随机点
     return [...roadPoints, ...randomPoints];
   }
   
   // 转换生成的点为Cesium.Cartesian3
-  return points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH));
+  return points.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, baseH + BIKE_HEIGHT));
 };
 
 /**
@@ -426,19 +557,19 @@ const generatePos = async (count = 200, center = [30.58, 114.31, 0]) => {
  * @param {Array} center - 中心点坐标 [纬度, 经度, 高度]
  * @returns {Cesium.Cartesian3[]} 三维笛卡尔坐标数组
  */
-const generateRandomPos = (count = 200, center = [30.58, 114.31, 0]) => {
+const generateRandomPos = (count = 200, center = [30.457, 114.615, 0]) => {
   const [baseLat, baseLon, baseH] = center;
   
   return Array(count).fill().map(() => {
-    // 限制生成范围（纬度±0.5度 ≈ 55km，经度±0.75度 ≈ 73km）
-    const latOffset = (Math.random() * 1.0 - 0.5);  // 纬度范围：30.08 ~ 31.08
-    const lonOffset = (Math.random() * 1.5 - 0.75); // 经度范围：113.56 ~ 115.06
+    // 限制生成范围（纬度±0.01度 ≈ 1.1km，经度±0.015度 ≈ 1.5km）
+    const latOffset = (Math.random() * 0.02 - 0.01);  // 纬度范围
+    const lonOffset = (Math.random() * 0.03 - 0.015); // 经度范围
     
     // 转换为Cesium三维坐标
     return Cesium.Cartesian3.fromDegrees(
       baseLon + lonOffset,  // 东经偏移
       baseLat + latOffset,  // 北纬偏移
-      baseH                 // 固定高度
+      baseH + BIKE_HEIGHT   // 固定高度 + 单车高度(10米)
     );
   });
 };
@@ -466,8 +597,12 @@ const animatePrimitive = (primitive, pos) => {
  * 沿道路更新单车位置
  * @param {Object} bike - 单车对象
  */
+/**
+ * 沿道路更新单车位置
+ * @param {Object} bike - 单车对象
+ */
 const updateBikePositionAlongRoad = (bike) => {
-  if (!bike || !bike.billboard || bike.status !== BikeStatus.IN_USE || !bike.routeInfo) {
+  if (!bike || !bike.billboard || bike.status !== BikeStatus.RIDING || !bike.routeInfo) {
     return;
   }
   
@@ -482,7 +617,7 @@ const updateBikePositionAlongRoad = (bike) => {
       const [newLon, newLat] = interpolatePosition(startPos, endPos, progress);
       
       // 更新位置
-      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, 0);
+      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
       bike.position = newPosition.clone();
       bike.billboard.position = newPosition;
       bike.longitude = newLon;
@@ -496,75 +631,52 @@ const updateBikePositionAlongRoad = (bike) => {
         bike.routeInfo.currentSegment = segmentAfterTransition.segment;
         bike.routeInfo.direction = segmentAfterTransition.direction;
         bike.routeInfo.progress = segmentAfterTransition.startProgress;
+        
+        // 更新目标列表，避免走回头路
+        if (!bike.routeInfo.visitedSegments) {
+          bike.routeInfo.visitedSegments = new Set();
+        }
+        bike.routeInfo.visitedSegments.add(segmentAfterTransition.segment.id);
       }
     }
   }
   
-  const { currentSegment, progress, speed, direction } = bike.routeInfo;
+  const { currentSegment, progress, speed, direction, visitedSegments } = bike.routeInfo;
   
   // 更新进度
   let newProgress = progress + speed * direction;
   
-  // 如果到达线段终点或起点
+  // 如果到达线段终点或起点，让单车停车
   if ((newProgress >= 1 && direction === 1) || (newProgress <= 0 && direction === -1)) {
-    // 尝试找到连接的下一个线段
-    const nextSegmentInfo = getNextConnectedSegment(currentSegment, direction);
+    // 当前位置
+    const currentPos = direction === 1 ? currentSegment.end : currentSegment.start;
     
-    if (nextSegmentInfo) {
-      // 有连接的下一个线段，直接过渡
-      bike.routeInfo.currentSegment = nextSegmentInfo.segment;
-      bike.routeInfo.direction = nextSegmentInfo.direction;
-      bike.routeInfo.progress = nextSegmentInfo.startProgress;
-      
-      // 计算新位置
-      let newPos;
-      if (nextSegmentInfo.direction === 1) {
-        newPos = nextSegmentInfo.segment.start;
-      } else {
-        newPos = nextSegmentInfo.segment.end;
-      }
-      
-      // 更新位置
-      const [newLon, newLat] = newPos;
-      const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, 0);
-      bike.position = newPosition.clone();
-      bike.billboard.position = newPosition;
-      bike.longitude = newLon;
-      bike.latitude = newLat;
-      
-      return;
-    } else {
-      // 找不到连接的线段，创建一个到随机新线段的平滑过渡
-      const newSegment = getRandomRoadSegment();
-      if (!newSegment) {
-        // 如果没有可用的线段，反转方向
-        bike.routeInfo.direction = -bike.routeInfo.direction;
-        bike.routeInfo.progress = bike.routeInfo.direction === 1 ? 0 : 1;
-        return;
-      }
-      
-      // 当前位置
-      const currentPos = direction === 1 ? currentSegment.end : currentSegment.start;
-      
-      // 新线段起点位置
-      const targetPos = Math.random() > 0.5 ? newSegment.start : newSegment.end;
-      const targetDirection = targetPos === newSegment.start ? 1 : -1;
-      
-      // 设置过渡动画
-      bike.routeInfo.transition = {
-        startTime: Date.now(),
-        duration: 2.0, // 2秒过渡时间
-        startPos: currentPos,
-        endPos: targetPos,
-        segmentAfterTransition: {
-          segment: newSegment,
-          direction: targetDirection,
-          startProgress: targetDirection === 1 ? 0 : 1
-        }
-      };
-      
-      return;
-    }
+    // 在当前位置附近随机选择一个点停车
+    const randomOffset = 0.00005 + Math.random() * 0.0001; // 约5-15米的随机偏移
+    const randomAngle = Math.random() * Math.PI * 2; // 随机角度
+    
+    const stopLon = currentPos[0] + randomOffset * Math.cos(randomAngle);
+    const stopLat = currentPos[1] + randomOffset * Math.sin(randomAngle);
+    
+    // 更新位置
+    const newPosition = Cesium.Cartesian3.fromDegrees(stopLon, stopLat, BIKE_HEIGHT);
+    bike.position = newPosition.clone();
+    bike.billboard.position = newPosition;
+    bike.longitude = stopLon;
+    bike.latitude = stopLat;
+    
+    // 更新状态为停车
+    bike.status = BikeStatus.PARKED;
+    bike.lastUpdated = Date.now();
+    bike.billboard.image = getIconByStatus(BikeStatus.PARKED);
+    
+    // 删除路径信息
+    delete bike.routeInfo;
+    
+    // 触发一辆停车状态的单车开始骑行
+    startRandomParkedBike();
+    
+    return;
   }
   
   bike.routeInfo.progress = newProgress;
@@ -577,15 +689,157 @@ const updateBikePositionAlongRoad = (bike) => {
   const newLat = startLat + newProgress * (endLat - startLat);
   
   // 更新位置
-  const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, 0);
+  const newPosition = Cesium.Cartesian3.fromDegrees(newLon, newLat, BIKE_HEIGHT);
   bike.position = newPosition.clone();
   bike.billboard.position = newPosition;
   bike.longitude = newLon;
   bike.latitude = newLat;
 };
+/**
+ * 随机选择一辆停车状态的单车开始骑行
+ */
+const startRandomParkedBike = () => {
+  // 获取所有停车状态的单车
+  const parkedBikes = bikesData.filter(bike => bike.status === BikeStatus.PARKED);
+  
+  // 如果没有停车状态的单车，直接返回
+  if (parkedBikes.length === 0) {
+    return;
+  }
+  
+  // 随机选择一辆单车
+  const randomBike = parkedBikes[Math.floor(Math.random() * parkedBikes.length)];
+  
+  // 查找最近的道路线段
+  const nearestRoad = findNearestRoadSegment([randomBike.longitude, randomBike.latitude]);
+  
+  // 如果找到了合适的道路线段
+  if (nearestRoad && nearestRoad.distance < 100) { // 只有在道路100米范围内才开始骑行
+    // 获取线段和投影点信息
+    const { segment, point, progress } = nearestRoad;
+    
+    // 随机决定方向
+    const direction = Math.random() > 0.5 ? 1 : -1;
+    
+    // 更新状态为骑行
+    randomBike.status = BikeStatus.RIDING;
+    randomBike.lastUpdated = Date.now();
+    
+    // 更新图标
+    if (randomBike.billboard) {
+      randomBike.billboard.image = getIconByStatus(BikeStatus.RIDING);
+    }
+    
+    // 创建路径信息
+    randomBike.routeInfo = {
+      currentSegment: segment,
+      progress: progress,
+      speed: 0.001 + Math.random() * 0.002, // 随机速度
+      direction: direction,
+      visitedSegments: new Set([segment.id]) // 记录当前线段为已访问
+    };
+    
+    // 设置平滑过渡到道路上
+    randomBike.routeInfo.transition = {
+      startTime: Date.now(),
+      duration: 2.0, // 2秒过渡
+      startPos: [randomBike.longitude, randomBike.latitude],
+      endPos: point,
+      segmentAfterTransition: {
+        segment: segment,
+        direction: direction,
+        startProgress: progress
+      }
+    };
+  }
+};
+/**
+ * 处理单车状态自动转换
+ * 停车→骑行或骑行→停车
+ */
+const updateBikeStates = () => {
+  const now = Date.now();
+  
+  // 检查是否到达状态更新时间
+  if (now - lastStateUpdateTime < STATE_TRANSITION.CHECK_INTERVAL) {
+    return;
+  }
+  
+  lastStateUpdateTime = now;
+  
+  // 遍历所有单车
+  bikesData.forEach(bike => {
+    // 处理停车→骑行转换
+    if (bike.status === BikeStatus.PARKED) {
+      if (Math.random() < STATE_TRANSITION.PARKED_TO_RIDING) {
+        // 找到最近的道路线段
+        const nearestRoad = findNearestRoadSegment([bike.longitude, bike.latitude]);
+        
+        if (nearestRoad && nearestRoad.distance < 100) { // 只有在道路100米范围内才转换
+          // 开始过渡到骑行状态
+          const { segment, point, progress } = nearestRoad;
+          
+          // 随机决定方向
+          const direction = Math.random() > 0.5 ? 1 : -1;
+          
+          // 更新状态
+          bike.status = BikeStatus.RIDING;
+          bike.lastUpdated = now;
+          
+          // 更新图标
+          if (bike.billboard) {
+            bike.billboard.image = getIconByStatus(BikeStatus.RIDING);
+          }
+          
+          // 创建路径信息
+          bike.routeInfo = {
+            currentSegment: segment,
+            progress: progress,
+            speed: 0.001 + Math.random() * 0.002, // 随机速度
+            direction: direction,
+            visitedSegments: new Set([segment.id]) // 记录当前线段为已访问
+          };
+          
+          // 设置平滑过渡到道路上
+          bike.routeInfo.transition = {
+            startTime: now,
+            duration: 2.0, // 2秒过渡
+            startPos: [bike.longitude, bike.latitude],
+            endPos: point,
+            segmentAfterTransition: {
+              segment: segment,
+              direction: direction,
+              startProgress: progress
+            }
+          };
+        }
+      }
+    }
+    // 处理骑行→停车转换
+    else if (bike.status === BikeStatus.RIDING) {
+      if (Math.random() < STATE_TRANSITION.RIDING_TO_PARKED) {
+        // 当前位置已经记录在bike.longitude和bike.latitude中
+        
+        // 更新状态
+        bike.status = BikeStatus.PARKED;
+        bike.lastUpdated = now;
+        
+        // 更新图标
+        if (bike.billboard) {
+          bike.billboard.image = getIconByStatus(BikeStatus.PARKED);
+        }
+        
+        // 清除路径信息
+        delete bike.routeInfo;
+      }
+    }
+  });
+};
 
 /**
  * 生成随机点图元（测试用）
+ * @param {Cesium.Viewer} viewer - Cesium视图对象
+ * @param {number} count - 生成点的数量
  */
 export const randomGeneratePoints = async (viewer, count) => {
   const posArr = await generatePos(count);
@@ -602,6 +856,12 @@ export const randomGeneratePoints = async (viewer, count) => {
 
 /**
  * 生成动态扩散圆环效果
+ * @param {Cesium.Viewer} viewer - Cesium视图对象
+ * @param {Cesium.Cartesian3} position - 位置
+ * @param {string} id - 唯一标识符
+ * @param {number} startAlpha - 起始透明度
+ * @param {number} maxSize - 最大尺寸
+ * @param {number} speed - 扩散速度
  */
 export const setCircles = (viewer, position, id, startAlpha = 0.6, maxSize = 100, speed = 1) => {
   const circles = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
@@ -655,13 +915,13 @@ const flyToBikes = (viewer, positions) => {
     duration: 2.0, // 飞行时间（秒）
     offset: new Cesium.HeadingPitchRange(0, -Cesium.Math.PI_OVER_FOUR, boundingSphere.radius + padding),
     complete: () => {
-      console.log('摄像头已调整到共享单车分布区域');
+      console.log('摄像头已调整到校园单车分布区域');
     }
   });
 };
 
 /**
- * 主入口：生成共享单车标记和动态连线
+ * 主入口：生成校园单车标记和动态连线
  * @param {Cesium.Viewer} viewer - Cesium视图对象
  * @param {number} count - 生成数量
  * @param {number} [imgIndex] - 指定图标索引（不再使用）
@@ -679,20 +939,19 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
   
   // 清空现有单车数据
   bikesData = [];
+  lastStateUpdateTime = Date.now();
 
-  // 状态分布比例: 70% 可用，10% 使用中，10% 维护中，10% 低电量
+  // 状态分布比例: 85% 停车，15% 骑行
   const statusDistribution = [
-    { status: BikeStatus.AVAILABLE, probability: 0.7 },
-    { status: BikeStatus.IN_USE, probability: 0.1 },
-    { status: BikeStatus.MAINTENANCE, probability: 0.1 },
-    { status: BikeStatus.LOW_BATTERY, probability: 0.1 }
+    { status: BikeStatus.PARKED, probability: 0.85 },
+    { status: BikeStatus.RIDING, probability: 0.15 }
   ];
 
   posArr.forEach((position, index) => {
     // 根据概率分配状态
     const rand = Math.random();
     let cumulativeProbability = 0;
-    let randomStatus = BikeStatus.AVAILABLE; // 默认状态
+    let randomStatus = BikeStatus.PARKED; // 默认状态
     
     for (const item of statusDistribution) {
       cumulativeProbability += item.probability;
@@ -701,11 +960,6 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
         break;
       }
     }
-    
-    // 如果是低电量状态，确保电量在20%以下
-    const batteryLevel = randomStatus === BikeStatus.LOW_BATTERY 
-      ? Math.floor(Math.random() * 20) 
-      : Math.floor(Math.random() * 80) + 20; // 其他状态电量在20-100%之间
     
     // 根据状态选择图标
     const iconImage = getIconByStatus(randomStatus);
@@ -734,21 +988,21 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
       latitude: lat,             // 纬度
       billboard: billboard,      // 对应的广告牌对象
       status: randomStatus,      // 状态
-      batteryLevel: batteryLevel, // 电量
       lastUpdated: Date.now(),   // 最后更新时间
       modelType: `Model-${String.fromCharCode(65 + Math.floor(Math.random() * 5))}` // 随机型号A-E
     };
     
-    // 如果是使用中状态，添加路径信息
-    if (randomStatus === BikeStatus.IN_USE) {
+    // 如果是骑行状态，添加路径信息
+    if (randomStatus === BikeStatus.RIDING) {
       // 使用道路线段来移动
       const roadSegment = getRandomRoadSegment();
       if (roadSegment) {
         bikeInfo.routeInfo = {
           currentSegment: roadSegment,
           progress: Math.random(), // 随机起始进度
-          speed: 0.002 + Math.random() * 0.004, // 降低速度，使移动更平滑
-          direction: Math.random() > 0.5 ? 1 : -1 // 随机方向
+          speed: 0.001 + Math.random() * 0.002, // 降低速度，使移动更平滑
+          direction: Math.random() > 0.5 ? 1 : -1, // 随机方向
+          visitedSegments: new Set([roadSegment.id]) // 记录已访问的线段
         };
         
         // 将位置更新为线段上的位置
@@ -759,7 +1013,7 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
         bikeInfo.longitude = startLon + progress * (endLon - startLon);
         bikeInfo.latitude = startLat + progress * (endLat - startLat);
         
-        const newPosition = Cesium.Cartesian3.fromDegrees(bikeInfo.longitude, bikeInfo.latitude, 0);
+        const newPosition = Cesium.Cartesian3.fromDegrees(bikeInfo.longitude, bikeInfo.latitude, BIKE_HEIGHT);
         bikeInfo.position = newPosition.clone();
         bikeInfo.billboard.position = newPosition;
       }
@@ -769,13 +1023,16 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
     bikesData.push(bikeInfo);
   });
   
-  // 设置预渲染事件，更新使用中的单车位置
+  // 设置预渲染事件，更新骑行中的单车位置和处理状态转换
   preRender = viewer.scene.preRender.addEventListener(() => {
-    // 获取所有使用中的单车
-    const inUseBikes = bikesData.filter(bike => bike.status === BikeStatus.IN_USE);
+    // 更新单车状态（停车→骑行、骑行→停车）
+    updateBikeStates();
     
-    // 更新每辆使用中单车的位置
-    inUseBikes.forEach(bike => {
+    // 获取所有骑行中的单车
+    const ridingBikes = bikesData.filter(bike => bike.status === BikeStatus.RIDING);
+    
+    // 更新每辆骑行中单车的位置
+    ridingBikes.forEach(bike => {
       updateBikePositionAlongRoad(bike);
     });
   });
@@ -785,7 +1042,7 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
     const bikeStore = (await import('./BikeStore')).default;
     bikeStore.initialize(bikesData);
     
-    // 尝试自动显示共享单车统计侧边栏
+    // 尝试自动显示校园单车统计侧边栏
     setTimeout(() => {
       // 获取左侧边栏组件实例
       const leftSidebar = document.querySelector('.sidebar-container')?.__vueParentComponent?.ctx;
@@ -800,12 +1057,12 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
   // 自动调整摄像机位置
   flyToBikes(viewer, posArr);
   
-  console.log(`成功创建${bikesData.length}个共享单车数据点`);
+  console.log(`成功创建${bikesData.length}个校园单车数据点`);
   return bikesData;
 };
 
 /**
- * 销毁共享单车图元
+ * 销毁校园单车图元
  */
 export const destroyBillboard = () => {
   if (preRender) {
@@ -821,8 +1078,8 @@ export const destroyBillboard = () => {
 };
 
 /**
- * 获取所有共享单车数据
- * @returns {Array} 共享单车数据数组
+ * 获取所有校园单车数据
+ * @returns {Array} 校园单车数据数组
  */
 export const getAllBikes = () => {
   return bikesData;
@@ -855,56 +1112,70 @@ export const updateBikeStatus = (id, status) => {
       bike.billboard.image = getIconByStatus(status);
     }
     
-    // 如果状态变为使用中，添加路径信息
-    if (status === BikeStatus.IN_USE && oldStatus !== BikeStatus.IN_USE) {
-      const roadSegment = getRandomRoadSegment();
-      if (roadSegment) {
+    // 如果状态变为骑行，添加路径信息
+    if (status === BikeStatus.RIDING && oldStatus !== BikeStatus.RIDING) {
+      // 找到最近的道路线段
+      const nearestRoad = findNearestRoadSegment([bike.longitude, bike.latitude]);
+      
+      if (nearestRoad && nearestRoad.segment) {
+        const { segment, point, progress } = nearestRoad;
+        
+        // 随机决定方向
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        
         bike.routeInfo = {
-          currentSegment: roadSegment,
-          progress: 0,
-          speed: 0.002 + Math.random() * 0.004, // 较慢的速度使移动更平滑
-          direction: 1
+          currentSegment: segment,
+          progress: progress,
+          speed: 0.001 + Math.random() * 0.002, // 随机速度
+          direction: direction,
+          visitedSegments: new Set([segment.id]) // 记录已访问的线段
         };
         
-        // 将位置更新为线段起点
-        const [startLon, startLat] = roadSegment.start;
-        bike.longitude = startLon;
-        bike.latitude = startLat;
-        
-        const newPosition = Cesium.Cartesian3.fromDegrees(startLon, startLat, 0);
-        bike.position = newPosition.clone();
-        bike.billboard.position = newPosition;
+        // 设置平滑过渡到道路上
+        bike.routeInfo.transition = {
+          startTime: Date.now(),
+          duration: 2.0, // 2秒过渡
+          startPos: [bike.longitude, bike.latitude],
+          endPos: point,
+          segmentAfterTransition: {
+            segment: segment,
+            direction: direction,
+            startProgress: progress
+          }
+        };
+      } else {
+        // 如果找不到最近的道路，使用随机道路段
+        const roadSegment = getRandomRoadSegment();
+        if (roadSegment) {
+          bike.routeInfo = {
+            currentSegment: roadSegment,
+            progress: 0,
+            speed: 0.001 + Math.random() * 0.002, // 较慢的速度使移动更平滑
+            direction: 1,
+            visitedSegments: new Set([roadSegment.id]) // 记录已访问的线段
+          };
+          
+          // 将位置更新为线段起点
+          const [startLon, startLat] = roadSegment.start;
+          
+          // 设置过渡动画
+          bike.routeInfo.transition = {
+            startTime: Date.now(),
+            duration: 3.0, // 3秒过渡时间
+            startPos: [bike.longitude, bike.latitude],
+            endPos: [startLon, startLat],
+            segmentAfterTransition: {
+              segment: roadSegment,
+              direction: 1,
+              startProgress: 0
+            }
+          };
+        }
       }
     } 
-    // 如果状态从使用中变为其他，移除路径信息
-    else if (oldStatus === BikeStatus.IN_USE && status !== BikeStatus.IN_USE) {
+    // 如果状态从骑行变为其他，移除路径信息
+    else if (oldStatus === BikeStatus.RIDING && status !== BikeStatus.RIDING) {
       delete bike.routeInfo;
-    }
-    
-    return true;
-  }
-  return false;
-};
-
-/**
- * 更新单车电量
- * @param {string} id - 单车ID
- * @param {number} batteryLevel - 新电量（0-100）
- * @returns {boolean} 是否更新成功
- */
-export const updateBikeBattery = (id, batteryLevel) => {
-  const bike = getBikeById(id);
-  if (bike) {
-    bike.batteryLevel = batteryLevel;
-    bike.lastUpdated = Date.now();
-    
-    // 如果电量低于20%，更新状态为低电量
-    if (batteryLevel < 20 && bike.status !== BikeStatus.LOW_BATTERY) {
-      return updateBikeStatus(id, BikeStatus.LOW_BATTERY);
-    }
-    // 如果电量恢复且当前是低电量状态，更新为可用状态
-    else if (batteryLevel >= 20 && bike.status === BikeStatus.LOW_BATTERY) {
-      return updateBikeStatus(id, BikeStatus.AVAILABLE);
     }
     
     return true;
@@ -951,3 +1222,4 @@ export const focusOnBikes = (viewer) => {
   // 飞向单车分布区域
   flyToBikes(viewer, positions);
 };
+

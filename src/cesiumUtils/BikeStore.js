@@ -1,5 +1,5 @@
 /**
- * 共享单车数据存储服务
+ * 校园单车数据存储服务
  * 提供单车数据的增删改查及其他管理功能
  */
 import { calculateDistance } from './randomPoints';
@@ -116,15 +116,6 @@ class BikeStore {
   }
 
   /**
-   * 获取电量低的单车
-   * @param {number} threshold - 电量阈值（如20表示低于20%）
-   * @returns {Array} 低电量单车数组
-   */
-  getLowBatteryBikes(threshold = 20) {
-    return this.bikes.filter(bike => bike.batteryLevel < threshold);
-  }
-
-  /**
    * 记录行程信息
    * @param {string} bikeId - 单车ID
    * @param {string} userId - 用户ID
@@ -135,7 +126,7 @@ class BikeStore {
     const tripId = `trip-${Date.now()}-${bikeId}`;
     
     // 更新单车状态
-    this.updateBike(bikeId, { status: 'inUse' });
+    this.updateBike(bikeId, { status: 'riding' });
     
     // 记录行程
     const trip = {
@@ -174,7 +165,7 @@ class BikeStore {
       trip.distance = calculateDistance(trip.startPosition, endPosition);
       
       // 更新单车状态
-      this.updateBike(trip.bikeId, { status: 'available' });
+      this.updateBike(trip.bikeId, { status: 'parked' });
       
       return trip;
     }
@@ -217,18 +208,14 @@ class BikeStore {
    */
   getBikesStatistics() {
     const total = this.bikes.length;
-    const available = this.getBikesByStatus('available').length;
-    const inUse = this.getBikesByStatus('inUse').length;
-    const maintenance = this.getBikesByStatus('maintenance').length;
-    const lowBattery = this.getLowBatteryBikes().length;
+    const parked = this.getBikesByStatus('parked').length;
+    const riding = this.getBikesByStatus('riding').length;
     
     return {
       total,
-      available,
-      inUse,
-      maintenance,
-      lowBattery,
-      utilization: total > 0 ? ((inUse / total) * 100).toFixed(2) : 0
+      parked,
+      riding,
+      utilizationRate: total > 0 ? ((riding / total) * 100).toFixed(2) : 0
     };
   }
 }
@@ -237,3 +224,4 @@ class BikeStore {
 const bikeStoreInstance = new BikeStore();
 
 export default bikeStoreInstance;
+

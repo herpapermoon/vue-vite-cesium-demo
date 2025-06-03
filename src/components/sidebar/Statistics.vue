@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <div class="statistics">
     <div class="chart-container">
       <h4>人口统计</h4>
@@ -127,4 +127,4 @@
     padding: 10px;
   }
 }
-</style>
+</style> -->
