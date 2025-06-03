@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import * as cocossd from '@tensorflow-models/coco-ssd';
-import BikePositionManager from './BikePositionManager';
+import BikePositionManager from './bikePositionManager';
 import CameraManager from './CameraManager';
 
 class BikeDetection {
@@ -234,8 +234,19 @@ class BikeDetection {
     this.canvas.height = wrapperHeight;
   }
 
-  // 计算两个点之间的欧几里得距离
+  // 检查值是否为有效数字
+  isValidNumber(value) {
+    return typeof value === 'number' && isFinite(value) && !isNaN(value);
+  }
+
+  // 安全地计算两个点之间的欧几里得距离
   calculateDistance(x1, y1, x2, y2) {
+    // 验证所有输入是否为有效数字
+    if (!this.isValidNumber(x1) || !this.isValidNumber(y1) || 
+        !this.isValidNumber(x2) || !this.isValidNumber(y2)) {
+      console.warn('计算距离时遇到无效数字:', { x1, y1, x2, y2 });
+      return Number.MAX_VALUE; // 返回一个特殊值表示无效
+    }
     return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
   }
 
@@ -244,6 +255,13 @@ class BikeDetection {
     // 获取两个矩形的坐标
     const [x1, y1, w1, h1] = box1;
     const [x2, y2, w2, h2] = box2;
+    
+    // 验证所有输入
+    if (!this.isValidNumber(x1) || !this.isValidNumber(y1) || !this.isValidNumber(w1) || !this.isValidNumber(h1) ||
+        !this.isValidNumber(x2) || !this.isValidNumber(y2) || !this.isValidNumber(w2) || !this.isValidNumber(h2)) {
+      console.warn('计算IoU时遇到无效数字:', { box1, box2 });
+      return 0;
+    }
     
     // 计算矩形的右下角坐标
     const x1_right = x1 + w1;
@@ -283,6 +301,15 @@ class BikeDetection {
     // 对于每个当前帧中的单车，尝试匹配前一帧中的单车
     for (let i = unmatched.length - 1; i >= 0; i--) {
       const currentBike = unmatched[i];
+      
+      // 验证当前单车坐标是否有效
+      if (!this.isValidNumber(currentBike.x) || !this.isValidNumber(currentBike.y) ||
+          !this.isValidNumber(currentBike.width) || !this.isValidNumber(currentBike.height)) {
+        console.warn('遇到无效的单车坐标:', currentBike);
+        unmatched.splice(i, 1); // 移除无效单车
+        continue;
+      }
+      
       const currentBox = [currentBike.x - currentBike.width/2, currentBike.y - currentBike.height/2, 
                            currentBike.width, currentBike.height];
       
@@ -299,14 +326,21 @@ class BikeDetection {
         const lastPosition = prevBike.positions[prevBike.positions.length - 1];
         if (!lastPosition) continue;
         
+        // 验证历史位置坐标是否有效
+        if (!this.isValidNumber(lastPosition.x) || !this.isValidNumber(lastPosition.y) ||
+            !this.isValidNumber(lastPosition.width) || !this.isValidNumber(lastPosition.height)) {
+          console.warn('遇到无效的历史单车坐标:', lastPosition);
+          continue;
+        }
+        
         // 计算距离分数
         const distance = this.calculateDistance(
           currentBike.x, currentBike.y, 
           lastPosition.x, lastPosition.y
         );
         
-        // 如果距离太远，不考虑匹配
-        if (distance > this.maxTrackingDistance) continue;
+        // 如果距离无效或太远，不考虑匹配
+        if (distance === Number.MAX_VALUE || distance > this.maxTrackingDistance) continue;
         
         // 计算IoU分数
         const prevBox = [lastPosition.x - lastPosition.width/2, lastPosition.y - lastPosition.height/2, 
@@ -349,11 +383,17 @@ class BikeDetection {
         const bikeA = bikes[i];
         const bikeB = bikes[j];
         
+        // 验证坐标
+        if (!this.isValidNumber(bikeA.x) || !this.isValidNumber(bikeA.y) ||
+            !this.isValidNumber(bikeB.x) || !this.isValidNumber(bikeB.y)) {
+          continue;
+        }
+        
         // 计算两辆单车中心点距离
         const distance = this.calculateDistance(bikeA.x, bikeA.y, bikeB.x, bikeB.y);
         
-        // 如果距离小于阈值，认为是同一辆单车的多次检测，移除其中一个
-        if (distance < mergeDistance) {
+        // 如果距离无效或小于阈值，认为是同一辆单车的多次检测，移除其中一个
+        if (distance !== Number.MAX_VALUE && distance < mergeDistance) {
           // 保留置信度更高的检测结果
           if (bikeA.confidence < bikeB.confidence) {
             bikes.splice(i, 1);
@@ -387,6 +427,13 @@ class BikeDetection {
     
     // 为未匹配的单车创建新的跟踪信息
     for (const newBike of newBikes) {
+      // 验证新单车数据
+      if (!this.isValidNumber(newBike.x) || !this.isValidNumber(newBike.y) ||
+          !this.isValidNumber(newBike.width) || !this.isValidNumber(newBike.height)) {
+        console.warn('忽略无效的新单车数据:', newBike);
+        continue;
+      }
+      
       const trackingId = `bike-${this.nextTrackingId++}`;
       this.bikeTrackingInfo.set(trackingId, {
         positions: [{...newBike}],
@@ -457,6 +504,14 @@ class BikeDetection {
         const [x, y, width, height] = prediction.bbox;
         const confidence = prediction.score;
         
+        // 验证检测框坐标是否有效
+        if (!this.isValidNumber(x) || !this.isValidNumber(y) || 
+            !this.isValidNumber(width) || !this.isValidNumber(height) ||
+            !this.isValidNumber(confidence)) {
+          console.warn('跳过无效的检测结果:', prediction.bbox);
+          return;
+        }
+        
         // 记录检测到的单车数据
         currentFrameBikes.push({
           x: x + width / 2,
@@ -481,6 +536,13 @@ class BikeDetection {
       const detectedItems = [];
       
       for (const [trackingId, bikeData] of trackedBikes.entries()) {
+        // 再次验证数据有效性
+        if (!this.isValidNumber(bikeData.x) || !this.isValidNumber(bikeData.y) ||
+            !this.isValidNumber(bikeData.width) || !this.isValidNumber(bikeData.height)) {
+          console.warn('跳过无效的追踪单车:', trackingId, bikeData);
+          continue;
+        }
+        
         const x = bikeData.x - bikeData.width / 2;
         const y = bikeData.y - bikeData.height / 2;
         const width = bikeData.width;
@@ -524,11 +586,25 @@ class BikeDetection {
       
       // 更新单车在地图上的位置
       if (this.cameraManager.getActiveCamera()) {
-        this.bikePositionManager.updateFromDetection(
-          detectedItems,
-          this.videoElement.videoWidth,
-          this.videoElement.videoHeight
-        );
+        try {
+          // 确保视频尺寸有效
+          const videoWidth = this.videoElement.videoWidth;
+          const videoHeight = this.videoElement.videoHeight;
+          
+          if (this.isValidNumber(videoWidth) && this.isValidNumber(videoHeight) && 
+              videoWidth > 0 && videoHeight > 0) {
+            this.bikePositionManager.updateFromDetection(
+              detectedItems,
+              videoWidth,
+              videoHeight
+            );
+          } else {
+            console.warn('视频尺寸无效:', videoWidth, videoHeight);
+          }
+        } catch (error) {
+          console.error('更新单车位置时出错:', error);
+          this.emit('error', { type: 'position', message: error.message });
+        }
       }
       
       // 发送检测结果事件
@@ -551,6 +627,13 @@ class BikeDetection {
   // 更新单车位置信息
   updateBikePosition(id, bikeData) {
     try {
+      // 验证单车数据
+      if (!this.isValidNumber(bikeData.x) || !this.isValidNumber(bikeData.y) ||
+          !this.isValidNumber(bikeData.width) || !this.isValidNumber(bikeData.height)) {
+        console.warn('无法更新单车位置，数据无效:', id, bikeData);
+        return;
+      }
+      
       // 存储检测到的单车信息
       this.detectedBikes.set(id, bikeData); 
       console.log('检测到单车:', id, bikeData.type, `置信度: ${Math.round(bikeData.confidence * 100)}%`);
