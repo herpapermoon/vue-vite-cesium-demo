@@ -26,7 +26,8 @@
         :class="{ 
           occupied: spot.isOccupied,
           full: spot.isFull 
-        }">
+        }"
+        @click="flyToSpot(spot)">
         <div class="spot-info">
           <span class="spot-id">车位 #{{ spot.id }}</span>
           <span class="spot-status" :class="{ 
@@ -41,8 +42,12 @@
           位置: {{ formatLocation(spot.center) }}
         </div>
         <div class="capacity">
-          已停放: {{ spot.bikeCount }}/{{ MAX_CAPACITY }} ({{ spot.occupancyRate }}%)
+          已停放: {{ spot.bikeCount }}/{{ spot.maxCapacity }} ({{ spot.occupancyRate }}%)
         </div>
+        <div class="area-info">
+          面积: {{ spot.area?.toFixed(2) || 0 }} m²
+        </div>
+        <div class="click-hint">点击跳转到地图位置</div>
       </div>
     </div>
   </div>
@@ -55,15 +60,30 @@ import Cesium from '@/cesiumUtils/cesium';
 
 const parkingSpots = ref([]);
 const PARKING_HEIGHT = 20;
-const MAX_CAPACITY = 10;
 const PARKING_SEARCH_RADIUS = 200; // 停车搜索半径
 
-// 清除已有的车位实体
-const clearParkingEntities = () => {
-  const viewer = window.viewer3D;
-  if (!viewer) return;
+// 计算多边形面积（球面面积计算）
+const calculatePolygonArea = (coordinates) => {
+  if (!coordinates || coordinates.length < 3) return 0;
   
-  viewer.entities.removeAll();
+  // 将经纬度转换为弧度
+  const toRadians = (degrees) => degrees * Math.PI / 180;
+  
+  // 使用球面多边形面积公式
+  let area = 0;
+  const R = 6371000; // 地球半径（米）
+  
+  for (let i = 0; i < coordinates.length; i++) {
+    const j = (i + 1) % coordinates.length;
+    const lat1 = toRadians(coordinates[i][1]);
+    const lat2 = toRadians(coordinates[j][1]);
+    const deltaLon = toRadians(coordinates[j][0] - coordinates[i][0]);
+    
+    area += deltaLon * (2 + Math.sin(lat1) + Math.sin(lat2));
+  }
+  
+  area = Math.abs(area * R * R / 2);
+  return area;
 };
 
 // 计算多边形中心点
@@ -80,6 +100,64 @@ const calculatePolygonCenter = (coordinates) => {
 const formatLocation = (center) => {
   if (!center) return '未知';
   return `${center[0].toFixed(6)}, ${center[1].toFixed(6)}`;
+};
+
+// 跳转到指定车位
+const flyToSpot = (spot) => {
+  const viewer = window.viewer3D;
+  if (!viewer || !spot.center) return;
+  
+  const destination = Cesium.Cartesian3.fromDegrees(
+    spot.center[0], 
+    spot.center[1], 
+    200
+  );
+  
+  viewer.camera.flyTo({
+    destination: destination,
+    orientation: {
+      heading: Cesium.Math.toRadians(0),
+      pitch: Cesium.Math.toRadians(-90),
+      roll: 0.0
+    },
+    duration: 2.0,
+    complete: () => {
+      highlightSpot(spot);
+    }
+  });
+};
+
+// 高亮显示指定车位
+const highlightSpot = (spot) => {
+  const viewer = window.viewer3D;
+  if (!viewer) return;
+  
+  const entities = viewer.entities.values;
+  const spotEntity = entities.find(entity => 
+    entity.name === `车位 #${spot.id}`
+  );
+  
+  if (spotEntity && spotEntity.polygon) {
+    spotEntity.polygon.material = Cesium.Color.CYAN.withAlpha(0.8);
+    
+    setTimeout(() => {
+      let color = Cesium.Color.GREEN.withAlpha(0.6);
+      if (spot.isFull) {
+        color = Cesium.Color.RED.withAlpha(0.6);
+      } else if (spot.isOccupied) {
+        color = Cesium.Color.YELLOW.withAlpha(0.6);
+      }
+      spotEntity.polygon.material = color;
+    }, 2000);
+  }
+};
+
+// 清除已有的车位实体
+const clearParkingEntities = () => {
+  const viewer = window.viewer3D;
+  if (!viewer) return;
+  
+  viewer.entities.removeAll();
 };
 
 // 判断点是否在多边形内
@@ -99,25 +177,23 @@ const isPointInPolygon = (point, polygon) => {
   return inside;
 };
 
-// 查找指定范围内的可用停车区 - 去掉了export关键字
+// 查找指定范围内的可用停车区
 const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters = 100) => {
   if (!parkingSpots.value || parkingSpots.value.length === 0) {
     return null;
   }
   
-  // 查找范围内的停车区
   const nearbySpots = parkingSpots.value.filter(spot => {
     if (!spot.center) return false;
     
     const distance = calculateDistance([centerLon, centerLat], spot.center);
-    return distance <= radiusInMeters && !spot.isFull; // 在范围内且未满
+    return distance <= radiusInMeters && !spot.isFull;
   });
   
   if (nearbySpots.length === 0) {
     return null;
   }
   
-  // 按距离排序，选择最近的
   nearbySpots.sort((a, b) => {
     const distA = calculateDistance([centerLon, centerLat], a.center);
     const distB = calculateDistance([centerLon, centerLat], b.center);
@@ -126,7 +202,6 @@ const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters =
   
   const selectedSpot = nearbySpots[0];
   
-  // 在停车区内生成随机停车位置
   const coordinates = selectedSpot.coordinates[0][0];
   const bounds = {
     minLon: Math.min(...coordinates.map(coord => coord[0])),
@@ -135,7 +210,6 @@ const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters =
     maxLat: Math.max(...coordinates.map(coord => coord[1]))
   };
   
-  // 在停车区边界内生成随机点
   let parkingPosition = null;
   let attempts = 0;
   const maxAttempts = 20;
@@ -144,16 +218,14 @@ const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters =
     const randomLon = bounds.minLon + Math.random() * (bounds.maxLon - bounds.minLon);
     const randomLat = bounds.minLat + Math.random() * (bounds.maxLat - bounds.minLat);
     
-    // 检查是否在多边形内
     if (isPointInPolygon([randomLon, randomLat], coordinates)) {
       parkingPosition = [randomLon, randomLat];
     }
     attempts++;
   }
   
-  // 如果无法在多边形内生成点，使用中心点
   if (!parkingPosition) {
-    const offset = 0.00002; // 约2米的小偏移
+    const offset = 0.00002;
     parkingPosition = [
       selectedSpot.center[0] + (Math.random() - 0.5) * offset,
       selectedSpot.center[1] + (Math.random() - 0.5) * offset
@@ -167,7 +239,7 @@ const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters =
   };
 };
 
-// 获取所有停车区数据 - 去掉了export关键字
+// 获取所有停车区数据
 const getAllParkingSpots = () => {
   return parkingSpots.value;
 };
@@ -178,7 +250,6 @@ const updateParkingStatus = () => {
   if (!bikes || !parkingSpots.value) return;
   
   parkingSpots.value = parkingSpots.value.map(spot => {
-    // 统计在车位范围内的单车数量
     const bikesInSpot = bikes.filter(bike => {
       if (bike.status !== 'parked') return false;
       return isPointInPolygon(
@@ -189,8 +260,8 @@ const updateParkingStatus = () => {
 
     const bikeCount = bikesInSpot.length;
     const isOccupied = bikeCount > 0;
-    const isFull = bikeCount >= MAX_CAPACITY;
-    const occupancyRate = (bikeCount / MAX_CAPACITY * 100).toFixed(1);
+    const isFull = bikeCount >= spot.maxCapacity; // 使用动态容量
+    const occupancyRate = (bikeCount / spot.maxCapacity * 100).toFixed(1);
 
     return {
       ...spot,
@@ -202,12 +273,49 @@ const updateParkingStatus = () => {
   });
 };
 
+// 加载车位数据
+const loadParkingData = async () => {
+  try {
+    const response = await fetch('/src/assets/ships/车位new.geojson');
+    const data = await response.json();
+    
+    parkingSpots.value = data.features.map((feature, index) => {
+      const coordinates = feature.geometry.coordinates;
+      const center = calculatePolygonCenter(coordinates[0][0]);
+      const spotId = feature.properties?.id || feature.properties?.ID || feature.properties?.name || (index + 1);
+      
+      // 计算面积并转换为容量（1平方米=1个车位）
+      const area = calculatePolygonArea(coordinates[0][0]);
+      const maxCapacity = Math.max(1, Math.floor(area)); // 至少1个车位
+      
+      return {
+        id: spotId,
+        coordinates: coordinates,
+        center: center,
+        area: area, // 保存面积信息
+        maxCapacity: maxCapacity, // 动态容量
+        isOccupied: false,
+        bikeCount: 0,
+        isFull: false,
+        occupancyRate: '0.0'
+      };
+    });
+
+    console.log('加载的车位数据:', parkingSpots.value);
+    
+    updateParkingStatus();
+    visualizeParkingSpots();
+    
+  } catch (error) {
+    console.error('加载车位数据失败:', error);
+  }
+};
+
 // 在 Cesium 地图上可视化车位
 const visualizeParkingSpots = () => {
   const viewer = window.viewer3D;
   if (!viewer || !parkingSpots.value.length) return;
 
-  // 清除现有实体
   clearParkingEntities();
   
   parkingSpots.value.forEach(spot => {
@@ -217,17 +325,18 @@ const visualizeParkingSpots = () => {
         return acc;
       }, []);
 
-      let color = Cesium.Color.GREEN.withAlpha(0.6); // 默认空闲状态
+      let color = Cesium.Color.GREEN.withAlpha(0.6);
       
       if (spot.isFull) {
-        color = Cesium.Color.RED.withAlpha(0.6); // 已满
+        color = Cesium.Color.RED.withAlpha(0.6);
       } else if (spot.isOccupied) {
-        color = Cesium.Color.YELLOW.withAlpha(0.6); // 部分占用
+        color = Cesium.Color.YELLOW.withAlpha(0.6);
       }
 
-      // 添加车位多边形
+      const displayId = spot.id !== undefined && spot.id !== null ? spot.id : '未知';
+
       viewer.entities.add({
-        name: `车位 #${spot.id}`,
+        name: `车位 #${displayId}`,
         polygon: {
           hierarchy: Cesium.Cartesian3.fromDegreesArray(coordinateArray),
           material: color,
@@ -239,24 +348,25 @@ const visualizeParkingSpots = () => {
         },
         description: `
           <table class="cesium-infoBox-defaultTable">
-            <tr><th>车位编号</th><td>#${spot.id}</td></tr>
+            <tr><th>车位编号</th><td>#${displayId}</td></tr>
+            <tr><th>面积</th><td>${spot.area.toFixed(2)} m²</td></tr>
+            <tr><th>最大容量</th><td>${spot.maxCapacity}</td></tr>
             <tr><th>当前状态</th><td>${spot.isFull ? '已满' : (spot.isOccupied ? '已占用' : '空闲')}</td></tr>
-            <tr><th>停放数量</th><td>${spot.bikeCount}/${MAX_CAPACITY}</td></tr>
+            <tr><th>停放数量</th><td>${spot.bikeCount}/${spot.maxCapacity}</td></tr>
             <tr><th>占用率</th><td>${spot.occupancyRate}%</td></tr>
           </table>
         `
       });
 
-      // 添加车位标签
       viewer.entities.add({
-        name: `车位标签 #${spot.id}`,
+        name: `车位标签 #${displayId}`,
         position: Cesium.Cartesian3.fromDegrees(
           spot.center[0],
           spot.center[1],
-          PARKING_HEIGHT + 3
+          PARKING_HEIGHT + 0.1
         ),
         label: {
-          text: `#${spot.id}`,
+          text: `#${displayId}`,
           font: '14px sans-serif',
           fillColor: Cesium.Color.WHITE,
           outlineWidth: 2,
@@ -274,37 +384,6 @@ const visualizeParkingSpots = () => {
   });
 };
 
-// 加载车位数据
-const loadParkingData = async () => {
-  try {
-    const response = await fetch('/src/assets/ships/测试车位地上1.geojson');
-    const data = await response.json();
-    
-    // 转换geojson数据为车位数组
-    parkingSpots.value = data.features.map(feature => {
-      const coordinates = feature.geometry.coordinates;
-      const center = calculatePolygonCenter(coordinates[0][0]);
-      
-      return {
-        id: feature.properties.id,
-        coordinates: coordinates,
-        center: center,
-        isOccupied: false,
-        bikeCount: 0,
-        isFull: false,
-        occupancyRate: '0.0'
-      };
-    });
-
-    // 初次更新车位占用状态并可视化
-    updateParkingStatus();
-    visualizeParkingSpots();
-    
-  } catch (error) {
-    console.error('加载车位数据失败:', error);
-  }
-};
-
 // 计算统计信息
 const totalSpots = computed(() => parkingSpots.value.length);
 const occupiedSpots = computed(() => parkingSpots.value.filter(spot => spot.isOccupied).length);
@@ -314,20 +393,17 @@ const availableSpots = computed(() => totalSpots.value - occupiedSpots.value);
 onMounted(() => {
   loadParkingData();
   
-  // 定期更新状态
   setInterval(() => {
     updateParkingStatus();
     visualizeParkingSpots();
-  }, 2000); // 2秒更新一次
+  }, 2000);
   
-  // 将停车区查询函数挂载到全局
   if (typeof window !== 'undefined') {
     window.findAvailableParkingSpotInRadius = findAvailableParkingSpotInRadius;
     window.getAllParkingSpots = getAllParkingSpots;
   }
 });
 
-// 使用defineExpose暴露需要外部访问的函数
 defineExpose({
   findAvailableParkingSpotInRadius,
   getAllParkingSpots
@@ -385,6 +461,14 @@ defineExpose({
     background: var(--cl-panel-light);
     border-radius: 4px;
     border-left: 4px solid var(--cl-success);
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: var(--cl-panel-dark);
+      transform: translateX(5px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
 
     &.occupied {
       border-left-color: var(--cl-warning);
@@ -431,6 +515,28 @@ defineExpose({
       font-size: 12px;
       color: var(--cl-text-secondary);
       margin-top: 4px;
+    }
+
+    .area-info {
+      font-size: 12px;
+      color: var(--cl-text-secondary);
+      margin-top: 4px;
+    }
+
+    .click-hint {
+      font-size: 11px;
+      color: var(--cl-text-secondary);
+      text-align: center;
+      margin-top: 8px;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    &:hover .click-hint {
+      opacity: 1;
     }
   }
 }
