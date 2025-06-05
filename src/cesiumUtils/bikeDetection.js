@@ -206,15 +206,39 @@ class BikeDetection {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
     
-    // 清除地图上的实体
-    bikeStore.clearDetectionData();
-    this.bikePositionManager.clearAllBikes();
+    // 清除临时检测数据，但不清除历史记录
+    bikeStore.clearTemporaryDetectionData();
     
     // 发送检测停止事件
     this.emit('detection', { count: 0, bikes: [] });
     this.emit('stopped', true);
     
     console.log('单车检测已停止');
+    return true;
+  }
+
+  // 只停止检测过程，但保留已检测到的数据
+  pauseDetection() {
+    if (!this.isRunning) return true;
+    
+    this.isRunning = false;
+    
+    if (this.detectInterval) {
+      clearInterval(this.detectInterval);
+      this.detectInterval = null;
+    }
+    
+    // 清除检测画布结果
+    if (this.ctx && this.canvas) {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+    
+    // 不清除任何数据或实体，保持地图上的单车可见
+    
+    // 发送检测停止事件，但不清除数据
+    this.emit('stopped', true);
+    
+    console.log('单车检测已暂停（数据保留）');
     return true;
   }
 

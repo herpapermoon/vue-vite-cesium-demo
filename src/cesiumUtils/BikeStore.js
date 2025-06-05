@@ -242,12 +242,14 @@ class BikeStore {
   // ===== 以下是视觉检测相关方法 =====
 
   /**
-   * 清除视觉检测相关的临时数据
+   * 清除所有视觉检测相关的数据（包括历史记录）
+   * 警告：这将删除所有检测数据！
    */
-  clearDetectionData() {
+  clearAllDetectionData() {
     this.detectedBikes.clear();
     this.previousDetectedBikes.clear();
     this.bikeTrackingInfo.clear();
+    this.bikeHistory.clear();
     this.detectionStats = {
       total: 0,
       lastUpdate: null,
@@ -258,6 +260,32 @@ class BikeStore {
         unknown: 0
       }
     };
+  }
+  
+  /**
+   * 仅清除临时视觉检测数据（保留历史记录和主数据库中的单车）
+   * 用于暂停检测而不丢失数据
+   */
+  clearTemporaryDetectionData() {
+    this.detectedBikes.clear();
+    this.previousDetectedBikes.clear();
+    
+    // 重置当前检测统计，但保留历史记录
+    this.detectionStats.total = 0;
+    this.detectionStats.types = {
+      bicycle: 0,
+      motorcycle: 0,
+      unknown: 0
+    };
+  }
+  
+  /**
+   * 清除视觉检测相关的临时数据
+   * @deprecated 使用 clearAllDetectionData 或 clearTemporaryDetectionData 代替
+   */
+  clearDetectionData() {
+    console.warn('BikeStore: clearDetectionData 已弃用，请使用 clearAllDetectionData 或 clearTemporaryDetectionData');
+    this.clearTemporaryDetectionData(); // 默认使用不清除历史记录的版本
   }
 
   /**

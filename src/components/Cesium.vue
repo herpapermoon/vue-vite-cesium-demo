@@ -38,6 +38,7 @@
         <button @click="toggleDetection" :class="{ active: detectionActive }">{{ detectionActive ? '停止识别' : '启动识别' }}</button>
         <button @click="toggleVideoPlay"><img :src="play" alt="播放/暂停"></button>
         <button @click="cameraSetupVisible = !cameraSetupVisible" :class="{ active: cameraSetupVisible }">摄像头设置</button>
+        <button @click="closeVideoContainer" class="close-btn">✕</button>
       </div>
     </div>
     <div class="video-wrapper">
@@ -214,13 +215,26 @@ const toggleDetection = async () => {
       return;
     }
     
-    // 强制显示视频容器
-    if (!videoShow.value) {
-      console.log('视频容器当前隐藏，设置为显示');
+    // 如果已有检测数据，显示通知提醒用户
+    if (bikeDetector && !detectionActive.value) {
+      const stats = bikeDetector.getStats();
+      if (stats && stats.total > 0) {
+        showNotification('视觉识别', `检测到已有${stats.total}辆单车数据，继续检测将保留这些数据`, 'info');
+      }
+    }
+    
+    // 如果视频容器被主动隐藏，不应该在此处强制显示
+    // 仅当用户通过按钮激活时才显示视频
+    if (!videoShow.value && toolbarRef.value?.isToolActive('bikeDetection')) {
+      console.log('显示视频容器');
       videoShow.value = true;
       
       // 给Vue一点时间更新DOM
       await new Promise(resolve => setTimeout(resolve, 100));
+    } else if (!videoShow.value) {
+      // 如果视频容器隐藏且不是通过工具栏激活，则不应继续
+      console.log('视频容器隐藏且非工具栏激活状态，不执行检测');
+      return;
     }
     
     // 确保视频元素存在
@@ -302,10 +316,10 @@ const toggleDetection = async () => {
       // 已在检测中，停止检测
       console.log('停止单车检测...');
       if (bikeDetector) {
-        bikeDetector.stopDetection();
+        bikeDetector.pauseDetection();
       }
       detectionActive.value = false;
-      showNotification('视觉识别', '单车视觉识别已停止', 'info');
+      showNotification('视觉识别', '单车视觉识别已暂停', 'info');
     } else {
       // 未在检测，开始检测
       console.log('准备启动单车检测...');
@@ -476,6 +490,36 @@ const onVideoError = (error) => {
       videoElement.load();
     }
   }, 2000);
+}
+
+// 关闭视频容器
+const closeVideoContainer = () => {
+  console.log('关闭视频容器');
+  
+  // 暂停检测，但保留数据
+  if (detectionActive.value && bikeDetector) {
+    bikeDetector.pauseDetection();
+    detectionActive.value = false;
+  }
+  
+  // 清理视频元素
+  const videoElement = document.getElementById('h5sVideo1');
+  if (videoElement) {
+    videoElement.pause();
+    videoElement.src = '';
+    videoElement.load();
+  }
+  
+  // 隐藏视频容器和摄像头设置面板
+  videoShow.value = false;
+  cameraSetupVisible.value = false;
+  
+  // 重置工具栏状态
+  if (toolbarRef.value?.isToolActive('bikeDetection')) {
+    toolbarRef.value.resetTool('bikeDetection');
+  }
+  
+  showNotification('单车管理', '已关闭检测窗口（数据已保留）', 'info');
 }
 
 // 通用功能调用函数，根据按钮激活状态决定执行成功或失败的回调
@@ -960,7 +1004,13 @@ case 'visionAnalysis': {
         
         // 停止单车检测
         if (detectionActive.value) {
-          await toggleDetection();
+          // 使用pauseDetection而非stopDetection，保留数据
+          if (bikeDetector) {
+            bikeDetector.pauseDetection();
+            detectionActive.value = false;
+          } else {
+            await toggleDetection();
+          }
         }
         
         // 清理视频元素
@@ -976,7 +1026,7 @@ case 'visionAnalysis': {
         cameraSetupVisible.value = false;
         
         back2Home();
-        showNotification('单车管理', '已退出单车视觉识别模式', 'info');
+        showNotification('单车管理', '已退出单车视觉识别模式（数据已保留）', 'info');
       });
       break;
     }
@@ -1087,6 +1137,7 @@ onMounted(() => {
     height: 240px; /* 确保有足够的高度 */
     overflow: hidden;
   }
+  
   
   video {
     width: 100%;
@@ -1240,6 +1291,17 @@ onMounted(() => {
     
     &.active {
       background: #e74c3c; // 红色表示停止/关闭
+    }
+    
+    &.close-btn {
+      background: #e74c3c;
+      font-weight: bold;
+      font-size: 14px;
+      padding: 0 6px;
+      
+      &:hover {
+        background: #c0392b;
+      }
     }
     
     img {

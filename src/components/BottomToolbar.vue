@@ -217,7 +217,8 @@ const resetTool = (toolId) => {
 
 // 暴露方法给父组件
 defineExpose({
-  resetTool
+  resetTool,
+  isToolActive: (toolId) => activeTool.value === toolId
 });
 </script>
 
