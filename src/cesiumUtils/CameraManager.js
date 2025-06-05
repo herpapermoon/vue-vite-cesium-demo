@@ -122,10 +122,20 @@ class CameraManager {
     const [longitude, latitude, height] = camera.position;
     const [heading, pitch, roll] = camera.direction;
     
+    // 验证坐标有效性
+    if (!this.isValidNumber(longitude) || !this.isValidNumber(latitude) || 
+        Math.abs(longitude) > 180 || Math.abs(latitude) > 90) {
+      console.warn('摄像头坐标无效:', camera.position);
+      return;
+    }
+    
+    // 确保高度为正值
+    const validHeight = this.isValidNumber(height) ? Math.max(1, height) : 10;
+    
     // 创建摄像头实体
     const cameraEntity = this.viewer.entities.add({
       name: camera.name,
-      position: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
+      position: Cesium.Cartesian3.fromDegrees(longitude, latitude, validHeight),
       billboard: {
         image: Cesium.buildModuleUrl('Assets/Textures/cctv-camera.png'), // 使用Cesium内置图标
         width: 32,
@@ -146,6 +156,9 @@ class CameraManager {
     
     this.cameraEntities.set(id, cameraEntity);
     
+    // 更新摄像头位置信息，确保使用有效高度
+    camera.position[2] = validHeight;
+    
     // 创建视锥体实体
     this.updateFrustumEntity(id);
   }
@@ -160,6 +173,16 @@ class CameraManager {
     const camera = this.cameras.get(id);
     const [longitude, latitude, height] = camera.position;
     const [heading, pitch, roll] = camera.direction;
+    
+    // 验证坐标有效性
+    if (!this.isValidNumber(longitude) || !this.isValidNumber(latitude) || 
+        Math.abs(longitude) > 180 || Math.abs(latitude) > 90) {
+      console.warn('摄像头坐标无效，无法创建视锥体:', camera.position);
+      return;
+    }
+    
+    // 确保高度为正值
+    const validHeight = this.isValidNumber(height) ? Math.max(1, height) : 10;
     
     // 计算视锥体覆盖区域
     const coverageRect = this.calculateCoverageRectangle(camera);
@@ -187,9 +210,9 @@ class CameraManager {
     // 添加视线方向
     const directionEntity = this.viewer.entities.add({
       name: `${camera.name} 方向`,
-      position: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
+      position: Cesium.Cartesian3.fromDegrees(longitude, latitude, validHeight),
       orientation: Cesium.Transforms.headingPitchRollQuaternion(
-        Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
+        Cesium.Cartesian3.fromDegrees(longitude, latitude, validHeight),
         new Cesium.HeadingPitchRoll(
           Cesium.Math.toRadians(heading),
           Cesium.Math.toRadians(pitch),
@@ -217,6 +240,24 @@ class CameraManager {
     const [heading, pitch, roll] = camera.direction;
     const distance = camera.maxDistance * 0.5; // 使用一半的最大距离作为方向线长度
     
+    // 验证参数
+    if (!this.isValidNumber(longitude) || !this.isValidNumber(latitude) || 
+        !this.isValidNumber(heading) || !this.isValidNumber(pitch)) {
+      console.warn('计算视线方向参数无效:', { 
+        position: [longitude, latitude, height],
+        direction: [heading, pitch, roll]
+      });
+      // 返回默认方向线
+      const validHeight = this.isValidNumber(height) ? Math.max(1, height) : 10;
+      return [
+        Cesium.Cartesian3.fromDegrees(longitude, latitude, validHeight),
+        Cesium.Cartesian3.fromDegrees(longitude + 0.0001, latitude + 0.0001, validHeight)
+      ];
+    }
+    
+    // 确保高度为正值
+    const validHeight = this.isValidNumber(height) ? Math.max(1, height) : 10;
+    
     // 计算方向终点
     const headingRad = Cesium.Math.toRadians(heading);
     const pitchRad = Cesium.Math.toRadians(pitch);
@@ -231,11 +272,14 @@ class CameraManager {
     
     const endLon = longitude + horizontalDistance * Math.sin(headingRad) * lonFactor;
     const endLat = latitude + horizontalDistance * Math.cos(headingRad) * latFactor;
-    const endHeight = height + verticalDistance;
+    const endHeight = validHeight + verticalDistance;
+    
+    // 确保终点高度不小于地表
+    const finalEndHeight = Math.max(0.1, endHeight);
     
     return [
-      Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
-      Cesium.Cartesian3.fromDegrees(endLon, endLat, endHeight)
+      Cesium.Cartesian3.fromDegrees(longitude, latitude, validHeight),
+      Cesium.Cartesian3.fromDegrees(endLon, endLat, finalEndHeight)
     ];
   }
   

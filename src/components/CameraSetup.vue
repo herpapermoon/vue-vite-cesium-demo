@@ -303,34 +303,98 @@ const togglePositionPicker = () => {
     // 添加点击事件处理
     positionHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     positionHandler.setInputAction((click) => {
-      const pickedPosition = viewer.scene.pickPosition(click.position);
+      // 使用pickEllipsoid获取地球表面位置
+      const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
       
-      if (Cesium.defined(pickedPosition)) {
-        const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
+      if (Cesium.defined(cartesian)) {
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
         const longitude = Cesium.Math.toDegrees(cartographic.longitude);
         const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-        const height = cartographic.height;
         
-        // 自动添加新摄像头
-        form.value = {
-          name: `摄像头 ${cameras.value.length + 1}`,
-          longitude,
-          latitude,
-          height,
-          heading: 0,
-          pitch: -30,
-          roll: 0,
-          horizontalFOV: 60,
-          verticalFOV: 45,
-          maxDistance: 100
-        };
-        
-        editMode.value = false;
-        editingCameraId.value = null;
-        showForm.value = true;
-        
-        // 关闭选择模式
-        togglePositionPicker();
+        // 尝试获取地形高度，如果支持的话
+        let height = 0;
+        if (viewer.scene.terrainProvider && viewer.scene.globe) {
+          // 异步获取地形高度
+          const promise = Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic]);
+          
+          // 使用Promise兼容方式处理，适用于新旧版本Cesium
+          Promise.resolve(promise)
+            .then((updatedPositions) => {
+              height = updatedPositions[0].height || 0;
+              
+              // 确保高度是合理的值，如果低于5米则设为10米
+              height = (height < 5) ? 10 : height + 10;
+              
+              // 自动添加新摄像头
+              form.value = {
+                name: `摄像头 ${cameras.value.length + 1}`,
+                longitude,
+                latitude,
+                height, // 添加适当高度
+                heading: 0,
+                pitch: -30,
+                roll: 0,
+                horizontalFOV: 60,
+                verticalFOV: 45,
+                maxDistance: 100
+              };
+              
+              editMode.value = false;
+              editingCameraId.value = null;
+              showForm.value = true;
+              
+              // 关闭选择模式
+              togglePositionPicker();
+            })
+            .catch(error => {
+              // 出错时使用默认高度
+              console.warn('获取地形高度出错:', error);
+              
+              form.value = {
+                name: `摄像头 ${cameras.value.length + 1}`,
+                longitude,
+                latitude,
+                height: 10, // 默认高度
+                heading: 0,
+                pitch: -30,
+                roll: 0,
+                horizontalFOV: 60,
+                verticalFOV: 45,
+                maxDistance: 100
+              };
+              
+              editMode.value = false;
+              editingCameraId.value = null;
+              showForm.value = true;
+              
+              // 关闭选择模式
+              togglePositionPicker();
+            });
+        } else {
+          // 如果无法获取地形高度，使用默认高度
+          height = 10; // 默认高度为10米
+          
+          // 自动添加新摄像头
+          form.value = {
+            name: `摄像头 ${cameras.value.length + 1}`,
+            longitude,
+            latitude,
+            height,
+            heading: 0,
+            pitch: -30,
+            roll: 0,
+            horizontalFOV: 60,
+            verticalFOV: 45,
+            maxDistance: 100
+          };
+          
+          editMode.value = false;
+          editingCameraId.value = null;
+          showForm.value = true;
+          
+          // 关闭选择模式
+          togglePositionPicker();
+        }
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     

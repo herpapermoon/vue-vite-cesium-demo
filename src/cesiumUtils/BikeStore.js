@@ -317,6 +317,8 @@ class BikeStore {
    * @param {Array} bikes - 单车数据数组
    */
   updateDetectedBikes(bikes) {
+    if (!Array.isArray(bikes) || bikes.length === 0) return;
+    
     // 重置类型统计
     this.detectionStats.types = {
       bicycle: 0,
@@ -324,10 +326,36 @@ class BikeStore {
       unknown: 0
     };
     
+    // 临时存储当前帧的单车ID，用于避免重复统计
+    const currentFrameBikeIds = new Set();
+    
     // 批量更新
     bikes.forEach(bike => {
-      this.updateDetectedBike(bike.id, bike);
+      if (!bike.id) return;
+      
+      // 避免同一帧中重复统计
+      if (!currentFrameBikeIds.has(bike.id)) {
+        currentFrameBikeIds.add(bike.id);
+        
+        // 更新单车数据
+        this.updateDetectedBike(bike.id, bike);
+        
+        // 更新类型统计（确保更新的是类型总数而非当前帧数）
+        const type = bike.type || 'unknown';
+        if (type === 'bicycle' || type === 'motorcycle') {
+          this.detectionStats.types[type]++;
+        } else {
+          this.detectionStats.types.unknown++;
+        }
+      }
     });
+    
+    // 更新总数统计 - 使用实际存储的单车数量而非传入的数组长度
+    this.detectionStats.total = this.detectedBikes.size;
+    this.detectionStats.lastUpdate = Date.now();
+    
+    // 记录检测统计历史
+    this.recordDetectionStats();
   }
 
   /**

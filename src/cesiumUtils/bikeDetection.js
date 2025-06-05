@@ -326,7 +326,11 @@ class BikeDetection {
       return { matchedBikes, unmatched };
     }
     
-    // 对于每个当前帧中的单车，尝试匹配前一帧中的单车
+    // 优先考虑位置连续的单车，改进匹配逻辑
+    // 1. 首先基于位置相似性进行粗匹配
+    // 2. 然后基于大小和外观特征进行精细匹配
+    
+    // 对当前帧中的每辆单车，找出最佳匹配
     for (let i = unmatched.length - 1; i >= 0; i--) {
       const currentBike = unmatched[i];
       
@@ -339,7 +343,7 @@ class BikeDetection {
       }
       
       const currentBox = [currentBike.x - currentBike.width/2, currentBike.y - currentBike.height/2, 
-                           currentBike.width, currentBike.height];
+                          currentBike.width, currentBike.height];
       
       let bestMatch = null;
       let bestScore = -1;
@@ -347,8 +351,9 @@ class BikeDetection {
       
       // 遍历已追踪的单车
       for (const [trackingId, prevBike] of trackingInfo.entries()) {
-        // 如果单车已经消失了设定的帧数，则不再考虑匹配
-        if (prevBike.missedFrames > this.bikeDisappearTimeout) continue;
+        // 如果单车已经消失了设定的帧数或已经被匹配，则不再考虑
+        if (prevBike.missedFrames > this.bikeDisappearTimeout || 
+            matchedBikes.has(trackingId)) continue;
         
         // 获取最近一次位置
         const lastPosition = prevBike.positions[prevBike.positions.length - 1];
@@ -370,18 +375,55 @@ class BikeDetection {
         // 如果距离无效或太远，不考虑匹配
         if (distance === Number.MAX_VALUE || distance > this.maxTrackingDistance) continue;
         
-        // 计算IoU分数
+        // 计算尺寸相似度(0-1)
+        const widthRatio = Math.min(currentBike.width, lastPosition.width) / 
+                          Math.max(currentBike.width, lastPosition.width);
+        const heightRatio = Math.min(currentBike.height, lastPosition.height) / 
+                           Math.max(currentBike.height, lastPosition.height);
+        const sizeScore = (widthRatio + heightRatio) / 2;
+        
+        // 计算IoU分数(0-1)
         const prevBox = [lastPosition.x - lastPosition.width/2, lastPosition.y - lastPosition.height/2, 
-                          lastPosition.width, lastPosition.height];
+                        lastPosition.width, lastPosition.height];
         const iou = this.calculateIoU(currentBox, prevBox);
         
-        // 综合考虑距离和IoU进行评分，为推车场景优化权重
-        // 为距离给予更高权重，因为推车时形状可能会变化但位置相对接近
-        const distanceScore = 1 - Math.min(distance / this.maxTrackingDistance, 1);
-        const score = iou * 0.3 + distanceScore * 0.7; // 调整权重，距离因素权重更高
+        // 计算类型匹配分数(0 or 1)
+        const typeScore = (prevBike.type === currentBike.type) ? 1.0 : 0.7;
         
-        // 更新最佳匹配，降低阈值，更容易匹配
-        if (score > bestScore && score > 0.2) { // 降低阈值到0.2
+        // 计算速度连续性分数(基于历史位置)
+        let velocityScore = 1.0; // 默认值
+        if (prevBike.positions.length >= 2) {
+          const secondLastPos = prevBike.positions[prevBike.positions.length - 2];
+          if (secondLastPos && this.isValidNumber(secondLastPos.x) && this.isValidNumber(secondLastPos.y)) {
+            // 计算前一段移动向量
+            const prevDx = lastPosition.x - secondLastPos.x;
+            const prevDy = lastPosition.y - secondLastPos.y;
+            
+            // 计算当前段移动向量
+            const currDx = currentBike.x - lastPosition.x;
+            const currDy = currentBike.y - lastPosition.y;
+            
+            // 计算向量夹角余弦值
+            const dotProduct = prevDx * currDx + prevDy * currDy;
+            const mag1 = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
+            const mag2 = Math.sqrt(currDx * currDx + currDy * currDy);
+            
+            if (mag1 > 1 && mag2 > 1) { // 避免静止物体的干扰
+              const cosTheta = dotProduct / (mag1 * mag2);
+              // 将夹角余弦值映射到0-1分数范围，余弦值越接近1说明方向越一致
+              velocityScore = (cosTheta + 1) / 2;
+            }
+          }
+        }
+        
+        // 综合评分，优化权重
+        const distanceScore = 1 - Math.min(distance / this.maxTrackingDistance, 1);
+        // 调整各因素权重以获得更稳定的跟踪
+        // 距离应该是最重要的因素，其次是IoU和尺寸相似度
+        const score = distanceScore * 0.5 + iou * 0.2 + sizeScore * 0.15 + typeScore * 0.1 + velocityScore * 0.05;
+        
+        // 更新最佳匹配
+        if (score > bestScore && score > 0.3) { // 使用更高的阈值0.3以减少误匹配
           bestScore = score;
           bestMatch = prevBike;
           bestTrackingId = trackingId;
@@ -439,8 +481,13 @@ class BikeDetection {
     const trackingInfo = bikeStore.getBikeTrackingInfo();
     const now = Date.now();
     
+    // 记录当前帧活动的单车ID，用于后续识别不再活动的单车
+    const activeBikeIds = new Set();
+    
     // 更新已匹配单车的信息
     for (const [trackingId, bikeData] of matchedBikes.entries()) {
+      activeBikeIds.add(trackingId);
+      
       const trackInfo = trackingInfo.get(trackingId);
       if (trackInfo) {
         // 更新位置历史
@@ -469,12 +516,15 @@ class BikeDetection {
       }
       
       const trackingId = `bike-${this.nextTrackingId++}`;
+      activeBikeIds.add(trackingId);
+      
       const newTrackInfo = {
         positions: [{...newBike}],
         firstSeen: now,
         lastSeen: now,
         missedFrames: 0,
-        type: newBike.type
+        type: newBike.type || 'unknown',
+        confidence: newBike.confidence || 0
       };
       
       // 将新的跟踪信息保存到BikeStore
@@ -486,17 +536,24 @@ class BikeDetection {
     
     // 更新未在当前帧中出现的单车的消失计数
     for (const [trackingId, trackInfo] of trackingInfo.entries()) {
-      if (!matchedBikes.has(trackingId)) {
+      if (!activeBikeIds.has(trackingId)) {
+        // 增加消失计数
         trackInfo.missedFrames += 1;
+        
+        // 如果连续消失的帧数超过阈值，根据置信度决定是否保留
+        if (trackInfo.missedFrames > this.bikeDisappearTimeout) {
+          // 高置信度的单车保留更长时间（避免闪烁）
+          const extendedTimeout = trackInfo.confidence > 0.8 ? 
+                this.bikeDisappearTimeout * 1.5 : this.bikeDisappearTimeout;
+          
+          if (trackInfo.missedFrames > extendedTimeout) {
+            // 单车已经消失太久，从跟踪列表中移除
+            bikeStore.removeBikeTracking(trackingId);
+            continue; // 跳过更新
+          }
+        }
+        
         bikeStore.updateBikeTrackingInfo(trackingId, trackInfo);
-      }
-    }
-    
-    // 清理长时间未被检测到的单车
-    for (const [trackingId, trackInfo] of trackingInfo.entries()) {
-      if (trackInfo.missedFrames > this.bikeDisappearTimeout) {
-        // 单车已经消失太久，从跟踪列表中移除
-        bikeStore.removeBikeTracking(trackingId);
       }
     }
     

@@ -93,6 +93,9 @@ class BikePositionManager {
       const currentTime = Date.now();
       const bikesWithPositions = [];
       
+      // 获取已在场景中的单车ID集合，用于后续清理和更新判断
+      const existingBikeIds = new Set(this.bikeEntities.keys());
+      
       // 更新或创建单车实体
       for (const bike of bikes) {
         // 验证单车数据
@@ -112,7 +115,6 @@ class BikePositionManager {
         const bottomCenterY = bike.y + bike.height / 2;
         
         // 估计单车距离（可根据单车大小调整）
-        // 这是一个简单的启发式方法，实际应用中可能需要更精确的深度估计
         const estimatedDistance = this.estimateDistance(bike.width, bike.height, bikeType);
         
         // 验证距离是否有效
@@ -203,6 +205,17 @@ class BikePositionManager {
           }
         } catch (entityError) {
           console.error('创建或更新单车实体时出错:', entityError);
+        }
+      }
+      
+      // 移除不再检测到的单车实体(排除trail-开头的轨迹线)
+      for (const bikeId of existingBikeIds) {
+        // 只清理单车实体，不清理轨迹线等其他实体
+        if (!bikeId.startsWith('trail-') && !updatedBikeIds.has(bikeId)) {
+          if (this.bikeEntities.has(bikeId)) {
+            this.viewer.entities.remove(this.bikeEntities.get(bikeId));
+            this.bikeEntities.delete(bikeId);
+          }
         }
       }
       

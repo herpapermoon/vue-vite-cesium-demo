@@ -215,24 +215,17 @@ const toggleDetection = async () => {
       return;
     }
     
-    // 如果已有检测数据，显示通知提醒用户
-    if (bikeDetector && !detectionActive.value) {
-      const stats = bikeDetector.getStats();
-      if (stats && stats.total > 0) {
-        showNotification('视觉识别', `检测到已有${stats.total}辆单车数据，继续检测将保留这些数据`, 'info');
-      }
-    }
-    
+    // 重要：尊重videoShow状态
     // 如果视频容器被主动隐藏，不应该在此处强制显示
-    // 仅当用户通过按钮激活时才显示视频
+    // 仅当用户通过工具栏激活时才显示视频
     if (!videoShow.value && toolbarRef.value?.isToolActive('bikeDetection')) {
-      console.log('显示视频容器');
+      console.log('显示视频容器（通过工具栏激活）');
       videoShow.value = true;
       
       // 给Vue一点时间更新DOM
       await new Promise(resolve => setTimeout(resolve, 100));
     } else if (!videoShow.value) {
-      // 如果视频容器隐藏且不是通过工具栏激活，则不应继续
+      // 如果视频容器隐藏且非工具栏激活，则不应继续
       console.log('视频容器隐藏且非工具栏激活状态，不执行检测');
       return;
     }
@@ -244,28 +237,34 @@ const toggleDetection = async () => {
       return;
     }
     
-    // 如果视频未加载，尝试加载一个测试视频
-    if (videoElement.readyState < 2) {
+    // 如果已有检测数据，显示通知提醒用户
+    if (bikeDetector && !detectionActive.value) {
+      const stats = bikeDetector.getStats();
+      if (stats && stats.total > 0) {
+        showNotification('视觉识别', `检测到已有${stats.total}辆单车数据，继续检测将保留这些数据`, 'info');
+      }
+    }
+    
+    // 如果视频未加载或播放错误，确保加载测试视频
+    if (videoElement.readyState < 2 || videoElement.error) {
       console.log('当前视频状态:', videoElement.readyState);
       
-      if (!videoElement.src || videoElement.src === '') {
-        console.log('视频源未设置，配置测试视频');
-        
+      try {
         // 使用正确的public路径
         const videoUrl = window.location.hostname === 'localhost' 
           ? '/assets/VCG2214050653.mp4'  // 开发环境
           : './assets/VCG2214050653.mp4'; // 生产环境
           
+        // 配置视频元素
         videoElement.src = videoUrl;
-        videoElement.preload = 'auto'; // 确保预加载
+        videoElement.preload = 'auto';
+        videoElement.muted = true; // 确保静音以支持自动播放
         videoElement.load();
         
         console.log('视频路径设置为:', videoElement.currentSrc || videoElement.src);
         showNotification('视频加载', '正在加载测试视频...', 'info');
-      }
-      
-      // 等待视频加载一段时间
-      try {
+        
+        // 等待视频加载
         await new Promise((resolve, reject) => {
           const onReady = () => {
             videoElement.removeEventListener('canplaythrough', onReady);
@@ -278,26 +277,26 @@ const toggleDetection = async () => {
             videoElement.removeEventListener('canplaythrough', onReady);
             videoElement.removeEventListener('loadeddata', onReady);
             videoElement.removeEventListener('error', onError);
-            reject(e);
+            reject(new Error('视频加载失败: ' + (e.message || '未知错误')));
           };
           
           videoElement.addEventListener('canplaythrough', onReady, { once: true });
           videoElement.addEventListener('loadeddata', onReady, { once: true });
           videoElement.addEventListener('error', onError, { once: true });
           
-          // 5秒后无论如何继续
+          // 5秒超时
           setTimeout(() => {
             if (videoElement.videoWidth > 0) {
               resolve();
             } else {
-              console.warn('视频加载超时，但尝试继续');
-              resolve(); // 仍然尝试继续
+              reject(new Error('视频加载超时'));
             }
           }, 5000);
         });
       } catch (err) {
-        console.warn('等待视频加载时发生问题:', err);
-        // 继续尝试
+        console.error('加载视频失败:', err);
+        showNotification('视频加载', `加载测试视频失败: ${err.message}`, 'error');
+        return;
       }
     }
     
@@ -307,16 +306,17 @@ const toggleDetection = async () => {
         await videoElement.play();
         console.log('视频播放已开始');
       } catch (e) {
-        console.warn('无法自动播放视频:', e);
+        console.warn('无法自动播放视频，需要用户交互:', e);
+        showNotification('视频播放', '请点击视频区域开始播放', 'info');
       }
     }
-
+    
     // 初始化或切换检测
     if (detectionActive.value) {
       // 已在检测中，停止检测
       console.log('停止单车检测...');
       if (bikeDetector) {
-        bikeDetector.pauseDetection();
+        bikeDetector.pauseDetection(); // 使用pauseDetection保留数据
       }
       detectionActive.value = false;
       showNotification('视觉识别', '单车视觉识别已暂停', 'info');
@@ -331,9 +331,9 @@ const toggleDetection = async () => {
         
         // 注册事件监听器
         bikeDetector.on('detection', (data) => {
-          console.log('收到检测事件:', data);
+          console.log('收到检测事件:', data?.count || 0, '辆单车');
           // 更新UI
-          detectedBikesCount.value = data.count;
+          detectedBikesCount.value = data?.count || 0;
           
           // 更新底部统计信息(如果存在)
           const detectionStats = document.querySelector('.detection-stats');
@@ -373,7 +373,7 @@ const toggleDetection = async () => {
         
         // 监听位置更新事件
         bikeDetector.on('positionUpdate', (data) => {
-          console.log('单车位置更新:', data.bikes.length, '辆单车');
+          console.log('单车位置更新:', data.bikes?.length, '辆单车');
           
           // 如果左侧边栏存在并有显示单车统计的方法，则调用
           if (leftSidebarRef.value && typeof leftSidebarRef.value.updateBikeStats === 'function') {
@@ -394,6 +394,15 @@ const toggleDetection = async () => {
         if (bikeDetector.cameraManager.cameras.size === 0) {
           showNotification('摄像头管理', '请添加摄像头以启用位置检测功能', 'info');
           cameraSetupVisible.value = true;
+        }
+      }
+      
+      // 确保视频正在播放
+      if (videoElement.paused) {
+        try {
+          await videoElement.play();
+        } catch (e) {
+          console.warn('需要用户交互才能播放视频:', e);
         }
       }
       
