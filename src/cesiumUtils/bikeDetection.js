@@ -14,6 +14,9 @@ class BikeDetection {
     this.canvas = null;
     this.ctx = null;
     
+    // 设置BikeStore的Cesium viewer引用
+    bikeStore.setViewer(viewer);
+    
     // 初始化摄像头管理器和单车位置管理器
     this.cameraManager = new CameraManager(viewer);
     this.bikePositionManager = new BikePositionManager(viewer, this.cameraManager);
@@ -173,8 +176,10 @@ class BikeDetection {
     
     // 重置检测状态
     this.nextTrackingId = 1;
-    // 清除BikeStore中与视觉检测相关的临时数据
-    bikeStore.clearDetectionData();
+    
+    // 清除BikeStore中与视觉检测相关的临时数据，但保留已检测实体
+    bikeStore.clearTemporaryDetectionData();
+    
     // 发送初始值0
     this.emit('detection', { count: 0, bikes: [] });
     
@@ -206,8 +211,8 @@ class BikeDetection {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
     
-    // 清除临时检测数据，但不清除历史记录
-    bikeStore.clearTemporaryDetectionData();
+    // 清除所有视觉检测数据和实体
+    bikeStore.clearAllDetectionData();
     
     // 发送检测停止事件
     this.emit('detection', { count: 0, bikes: [] });
@@ -488,6 +493,9 @@ class BikeDetection {
     for (const [trackingId, bikeData] of matchedBikes.entries()) {
       activeBikeIds.add(trackingId);
       
+      // 添加来源标记
+      bikeData.source = 'detection';
+      
       const trackInfo = trackingInfo.get(trackingId);
       if (trackInfo) {
         // 更新位置历史
@@ -500,6 +508,8 @@ class BikeDetection {
         trackInfo.missedFrames = 0;
         // 更新最后出现时间
         trackInfo.lastSeen = now;
+        // 确保保存来源
+        trackInfo.source = 'detection';
         
         // 更新BikeStore中的跟踪信息
         bikeStore.updateBikeTrackingInfo(trackingId, trackInfo);
@@ -518,13 +528,17 @@ class BikeDetection {
       const trackingId = `bike-${this.nextTrackingId++}`;
       activeBikeIds.add(trackingId);
       
+      // 添加来源标记
+      newBike.source = 'detection';
+      
       const newTrackInfo = {
         positions: [{...newBike}],
         firstSeen: now,
         lastSeen: now,
         missedFrames: 0,
         type: newBike.type || 'unknown',
-        confidence: newBike.confidence || 0
+        confidence: newBike.confidence || 0,
+        source: 'detection'
       };
       
       // 将新的跟踪信息保存到BikeStore
@@ -536,6 +550,9 @@ class BikeDetection {
     
     // 更新未在当前帧中出现的单车的消失计数
     for (const [trackingId, trackInfo] of trackingInfo.entries()) {
+      // 只处理detection来源的单车
+      if (trackInfo.source !== 'detection') continue;
+      
       if (!activeBikeIds.has(trackingId)) {
         // 增加消失计数
         trackInfo.missedFrames += 1;
@@ -615,7 +632,8 @@ class BikeDetection {
           width,
           height,
           confidence,
-          type: prediction.class
+          type: prediction.class,
+          source: 'detection'  // 标记来源为视觉检测
         });
       });
       
@@ -668,7 +686,8 @@ class BikeDetection {
           width,
           height,
           confidence,
-          type: bikeData.type
+          type: bikeData.type,
+          source: 'detection'  // 标记来源为视觉检测
         };
         
         detectedItems.push(bikeDataWithId);
@@ -729,6 +748,9 @@ class BikeDetection {
         console.warn('无法更新单车位置，数据无效:', id, bikeData);
         return;
       }
+      
+      // 确保来源标记正确
+      bikeData.source = 'detection';
       
       // 存储检测到的单车信息到BikeStore中
       bikeStore.updateDetectedBike(id, bikeData);

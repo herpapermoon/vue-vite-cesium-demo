@@ -9,7 +9,12 @@ class BikePositionManager {
   constructor(viewer, cameraManager) {
     this.viewer = viewer;
     this.cameraManager = cameraManager;
-    this.bikeEntities = new Map(); // 仅存储Cesium实体对象，数据存储在BikeStore中
+    
+    // 设置BikeStore的viewer引用
+    bikeStore.setViewer(viewer);
+    
+    // 不再需要自己存储实体引用，由BikeStore统一管理
+    // this.bikeEntities = new Map();
     
     // 默认高度设置
     this.defaultHeight = 1.5; // 默认单车高度，单位：米
@@ -93,9 +98,6 @@ class BikePositionManager {
       const currentTime = Date.now();
       const bikesWithPositions = [];
       
-      // 获取已在场景中的单车ID集合，用于后续清理和更新判断
-      const existingBikeIds = new Set(this.bikeEntities.keys());
-      
       // 更新或创建单车实体
       for (const bike of bikes) {
         // 验证单车数据
@@ -155,75 +157,24 @@ class BikePositionManager {
           detectionTime: currentTime,
           cameraId: activeCamera.id,
           cameraName: activeCamera.name,
-          status: 'detected' // 设置状态为检测到
+          status: 'detected', // 设置状态为检测到
+          source: 'detection' // 标记来源为视觉检测
         };
         
         bikesWithPositions.push(bikeWithPosition);
         
-        try {
-          // 更新或创建单车实体
-          if (this.bikeEntities.has(bike.id)) {
-            // 更新现有实体
-            const entity = this.bikeEntities.get(bike.id);
-            
-            // 更新位置
-            entity.position = Cesium.Cartesian3.fromDegrees(
-              longitude, latitude, this.defaultHeight
-            );
-            
-            // 更新描述信息
-            entity.description = this.createBikeDescription(bikeWithPosition);
-          } else {
-            // 创建新实体
-            const entity = this.viewer.entities.add({
-              id: bike.id,
-              name: `单车 #${bike.id.split('-')[1]}`,
-              position: Cesium.Cartesian3.fromDegrees(
-                longitude, latitude, this.defaultHeight
-              ),
-              billboard: {
-                image: bikeType === 'motorcycle' ? this.motoIconPath : this.bikeIconPath,
-                width: 32,
-                height: 32,
-                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY
-              },
-              label: {
-                text: `#${bike.id.split('-')[1]}`,
-                font: '12px sans-serif',
-                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                outlineWidth: 2,
-                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                pixelOffset: new Cesium.Cartesian2(0, -36),
-                disableDepthTestDistance: Number.POSITIVE_INFINITY
-              },
-              description: this.createBikeDescription(bikeWithPosition)
-            });
-            
-            // 存储实体引用
-            this.bikeEntities.set(bike.id, entity);
-          }
-        } catch (entityError) {
-          console.error('创建或更新单车实体时出错:', entityError);
-        }
-      }
-      
-      // 移除不再检测到的单车实体(排除trail-开头的轨迹线)
-      for (const bikeId of existingBikeIds) {
-        // 只清理单车实体，不清理轨迹线等其他实体
-        if (!bikeId.startsWith('trail-') && !updatedBikeIds.has(bikeId)) {
-          if (this.bikeEntities.has(bikeId)) {
-            this.viewer.entities.remove(this.bikeEntities.get(bikeId));
-            this.bikeEntities.delete(bikeId);
-          }
-        }
+        // 使用BikeStore更新单车数据和实体
+        bikeStore.updateDetectedBike(bike.id, bikeWithPosition);
       }
       
       // 将单车数据保存到BikeStore
       if (bikesWithPositions.length > 0) {
         try {
-          // 批量更新单车数据到BikeStore
-          bikeStore.updateDetectedBikes(bikesWithPositions);
+          // 批量更新单车数据到BikeStore - 现在在上面直接更新了，这里不需要
+          // bikeStore.updateDetectedBikes(bikesWithPositions);
+          
+          // 移除不再检测到的单车实体（避免闪烁，先不处理）
+          // 实现保留最后位置的机制由BikeStore和BikeDetection协同完成
         } catch (storeError) {
           console.error('更新BikeStore数据时出错:', storeError);
         }
@@ -344,8 +295,11 @@ class BikePositionManager {
       }
     });
     
-    // 存储轨迹实体引用
-    this.bikeEntities.set(`trail-${bikeId}`, trailEntity);
+    // 将轨迹线记录到BikeStore中
+    bikeStore.entityMap.set(`trail-${bikeId}`, {
+      entity: trailEntity,
+      type: 'trail'
+    });
     
     return trailEntity;
   }
@@ -356,9 +310,11 @@ class BikePositionManager {
    */
   hideBikeTrail(bikeId) {
     const trailId = `trail-${bikeId}`;
-    if (this.bikeEntities.has(trailId)) {
-      this.viewer.entities.remove(this.bikeEntities.get(trailId));
-      this.bikeEntities.delete(trailId);
+    const trailRef = bikeStore.entityMap.get(trailId);
+    
+    if (trailRef) {
+      this.viewer.entities.remove(trailRef.entity);
+      bikeStore.entityMap.delete(trailId);
     }
   }
   
@@ -479,6 +435,12 @@ class BikePositionManager {
         outlineColor: Cesium.Color.RED.withAlpha(0.5)
       }
     });
+    
+    // 记录到BikeStore中
+    bikeStore.entityMap.set('heatmap', {
+      entity: this.heatmapEntity,
+      type: 'heatmap'
+    });
   }
   
   /**
@@ -519,7 +481,10 @@ class BikePositionManager {
     this.heatmapEnabled = enabled;
     
     if (!enabled && this.heatmapEntity) {
-      this.viewer.entities.remove(this.heatmapEntity);
+      if (bikeStore.entityMap.has('heatmap')) {
+        this.viewer.entities.remove(bikeStore.entityMap.get('heatmap').entity);
+        bikeStore.entityMap.delete('heatmap');
+      }
       this.heatmapEntity = null;
     } else if (enabled) {
       this.updateHeatmap();
@@ -531,16 +496,13 @@ class BikePositionManager {
    * @param {string} bikeId 单车ID
    */
   removeBike(bikeId) {
-    // 移除实体
-    if (this.bikeEntities.has(bikeId)) {
-      this.viewer.entities.remove(this.bikeEntities.get(bikeId));
-      this.bikeEntities.delete(bikeId);
-    }
+    // 使用BikeStore移除单车实体
+    bikeStore.removeBikeEntity(bikeId);
     
     // 移除轨迹
     this.hideBikeTrail(bikeId);
     
-    // 从BikeStore中移除单车
+    // 从BikeStore中移除单车数据
     bikeStore.removeBike(bikeId);
     
     // 更新热力图
@@ -553,21 +515,27 @@ class BikePositionManager {
    * 清除所有单车
    */
   clearAllBikes() {
-    // 移除所有单车实体
-    for (const entity of this.bikeEntities.values()) {
-      this.viewer.entities.remove(entity);
+    // 使用BikeStore清除所有单车实体和数据
+    if (bikeStore.entityMap) {
+      // 获取所有非轨迹的单车实体ID
+      const bikeEntityIds = Array.from(bikeStore.entityMap.keys())
+        .filter(id => !id.startsWith('trail-') && id !== 'heatmap');
+        
+      // 清除单车实体
+      bikeEntityIds.forEach(id => bikeStore.removeBikeEntity(id));
     }
     
-    // 清空集合
-    this.bikeEntities.clear();
-    
     // 清除BikeStore中的检测数据
-    bikeStore.clearDetectionData();
+    bikeStore.clearAllDetectionData();
     
     // 移除热力图
     if (this.heatmapEntity) {
       this.viewer.entities.remove(this.heatmapEntity);
       this.heatmapEntity = null;
+      
+      if (bikeStore.entityMap.has('heatmap')) {
+        bikeStore.entityMap.delete('heatmap');
+      }
     }
     
     // 触发清除事件

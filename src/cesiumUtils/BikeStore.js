@@ -27,16 +27,335 @@ class BikeStore {
         unknown: 0
       }
     };
+    
+    // 实体管理
+    this.entityMap = new Map(); // 存储所有单车相关的实体引用
+    this.billboardCollections = new Map(); // 存储图标集合
+    this.viewer = null; // Cesium实例引用
+    
+    // 默认图标路径
+    this.defaultBikeIconPath = Cesium.buildModuleUrl('Assets/Textures/maki/bicycle.png');
+    this.defaultMotoIconPath = Cesium.buildModuleUrl('Assets/Textures/maki/motorcycle.png');
+    
+    // 单车状态对应的图标
+    this.statusIconMap = {
+      'parked': this.defaultBikeIconPath,
+      'riding': this.defaultMotoIconPath,
+      'detected': this.defaultBikeIconPath
+    };
   }
 
   /**
+   * 设置Cesium实例引用
+   * @param {Cesium.Viewer} viewer - Cesium查看器实例
+   */
+  setViewer(viewer) {
+    this.viewer = viewer;
+    return this;
+  }
+  
+  /**
    * 初始化存储，导入单车数据
    * @param {Array} bikesData - 单车数据数组
+   * @param {String} source - 数据来源标识
+   * @returns {number} 导入的单车数量
    */
-  initialize(bikesData) {
-    this.bikes = [...bikesData];
-    console.log(`BikeStore已初始化，导入${this.bikes.length}辆单车数据`);
+  initialize(bikesData, source = 'random') {
+    // 添加数据来源标记
+    const dataWithSource = bikesData.map(bike => ({
+      ...bike,
+      source: source
+    }));
+    
+    // 合并到现有数据，保留视觉检测的数据
+    const detectedIds = Array.from(this.detectedBikes.keys());
+    this.bikes = [
+      ...this.bikes.filter(b => b.source === 'detection' || detectedIds.includes(b.id)),
+      ...dataWithSource.filter(b => !detectedIds.includes(b.id))
+    ];
+    
+    console.log(`BikeStore已初始化，导入${dataWithSource.length}辆单车数据`);
     return this.bikes.length;
+  }
+  
+  /**
+   * 设置图标集合
+   * @param {String} name - 集合名称
+   * @param {Cesium.BillboardCollection} collection - 图标集合
+   */
+  setBillboardCollection(name, collection) {
+    this.billboardCollections.set(name, collection);
+    return this;
+  }
+  
+  /**
+   * 获取图标集合
+   * @param {String} name - 集合名称
+   * @returns {Cesium.BillboardCollection|null} 图标集合
+   */
+  getBillboardCollection(name) {
+    return this.billboardCollections.get(name) || null;
+  }
+  
+  /**
+   * 获取或创建图标集合
+   * @param {String} name - 集合名称
+   * @returns {Cesium.BillboardCollection} 图标集合
+   */
+  getOrCreateBillboardCollection(name) {
+    if (!this.billboardCollections.has(name)) {
+      if (!this.viewer) {
+        throw new Error('未设置Cesium.Viewer实例，无法创建图标集合');
+      }
+      const collection = this.viewer.scene.primitives.add(new Cesium.BillboardCollection());
+      this.billboardCollections.set(name, collection);
+    }
+    return this.billboardCollections.get(name);
+  }
+  
+  /**
+   * 根据状态获取图标
+   * @param {String} status - 单车状态
+   * @returns {String} 图标URL
+   */
+  getIconByStatus(status) {
+    return this.statusIconMap[status] || this.defaultBikeIconPath;
+  }
+  
+  /**
+   * 设置状态图标映射
+   * @param {Object} iconMap - 状态到图标的映射
+   */
+  setStatusIconMap(iconMap) {
+    this.statusIconMap = {
+      ...this.statusIconMap,
+      ...iconMap
+    };
+    return this;
+  }
+
+  /**
+   * 添加单车数据
+   * @param {Object} bikeData - 单车数据
+   * @returns {Object} 添加的单车数据
+   */
+  addBike(bikeData) {
+    // 检查是否已存在
+    const existingIndex = this.bikes.findIndex(bike => bike.id === bikeData.id);
+    if (existingIndex !== -1) {
+      // 更新现有数据
+      this.bikes[existingIndex] = {
+        ...this.bikes[existingIndex],
+        ...bikeData,
+        lastUpdated: Date.now()
+      };
+      return this.bikes[existingIndex];
+    } else {
+      // 添加新数据
+      const newBike = {
+        ...bikeData,
+        lastUpdated: Date.now()
+      };
+      this.bikes.push(newBike);
+      return newBike;
+    }
+  }
+  
+  /**
+   * 创建单车实体
+   * @param {Object} bikeData - 单车数据
+   * @param {String} collectionName - 图标集合名称
+   * @returns {Object} 创建的实体
+   */
+  createBikeEntity(bikeData, collectionName = 'default') {
+    if (!this.viewer) {
+      throw new Error('未设置Cesium.Viewer实例，无法创建实体');
+    }
+    
+    const { id, longitude, latitude, height = 1.5, status = 'parked', type = 'bicycle' } = bikeData;
+    
+    // 检查是否已存在该实体
+    if (this.entityMap.has(id)) {
+      return this.updateBikeEntity(id, bikeData);
+    }
+    
+    // 获取图标集合
+    const collection = this.getOrCreateBillboardCollection(collectionName);
+    
+    // 确定图标
+    const iconImage = type === 'motorcycle' ? 
+                      this.statusIconMap['riding'] : 
+                      this.getIconByStatus(status);
+    
+    // 创建广告牌
+    const billboard = collection.add({
+      id: id,
+      position: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
+      image: iconImage,
+      scale: 0.1,
+      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+      verticalOrigin: Cesium.VerticalOrigin.CENTER
+    });
+    
+    // 创建标签
+    const labelId = `label-${id}`;
+    let label = null;
+    
+    // 仅为非随机生成的单车创建标签
+    if (bikeData.source !== 'random') {
+      const shortId = id.split('-').pop();
+      label = this.viewer.entities.add({
+        id: labelId,
+        position: Cesium.Cartesian3.fromDegrees(longitude, latitude, height + 0.3),
+        label: {
+          text: `#${shortId}`,
+          font: '12px sans-serif',
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          outlineWidth: 2,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -5),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        }
+      });
+    }
+    
+    // 存储实体引用
+    this.entityMap.set(id, { 
+      billboard, 
+      label, 
+      labelId,
+      collectionName
+    });
+    
+    // 确保单车数据中也包含实体引用
+    this.addBike({
+      ...bikeData,
+      entityId: id
+    });
+    
+    return { billboard, label };
+  }
+  
+  /**
+   * 更新单车实体
+   * @param {String} id - 单车ID
+   * @param {Object} updateData - 更新的数据
+   * @returns {Object} 更新后的实体
+   */
+  updateBikeEntity(id, updateData) {
+    const entityRef = this.entityMap.get(id);
+    if (!entityRef) {
+      return this.createBikeEntity({ id, ...updateData });
+    }
+    
+    const { billboard, label } = entityRef;
+    const { longitude, latitude, height = 1.5, status, type } = updateData;
+    
+    // 更新广告牌位置
+    if (longitude && latitude) {
+      billboard.position = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
+      
+      // 如果有标签，也更新标签位置
+      if (label) {
+        label.position = Cesium.Cartesian3.fromDegrees(longitude, latitude, height + 0.3);
+      }
+    }
+    
+    // 更新图标
+    if (status || type) {
+      const iconImage = type === 'motorcycle' ? 
+                      this.statusIconMap['riding'] : 
+                      this.getIconByStatus(status || 'parked');
+      billboard.image = iconImage;
+    }
+    
+    // 更新单车数据
+    this.updateBike(id, updateData);
+    
+    return { billboard, label };
+  }
+  
+  /**
+   * 移除单车实体
+   * @param {String} id - 单车ID
+   * @returns {Boolean} 是否成功移除
+   */
+  removeBikeEntity(id) {
+    const entityRef = this.entityMap.get(id);
+    if (!entityRef) {
+      return false;
+    }
+    
+    const { billboard, label, labelId, collectionName } = entityRef;
+    
+    // 移除广告牌
+    const collection = this.getBillboardCollection(collectionName);
+    if (collection && !collection.isDestroyed()) {
+      const index = collection._billboards.indexOf(billboard);
+      if (index !== -1) {
+        collection.remove(billboard);
+      }
+    }
+    
+    // 移除标签
+    if (label) {
+      this.viewer.entities.removeById(labelId);
+    }
+    
+    // 移除引用
+    this.entityMap.delete(id);
+    
+    return true;
+  }
+  
+  /**
+   * 清除指定来源的单车及其实体
+   * @param {String} source - 数据来源
+   */
+  clearBikesBySource(source) {
+    // 找出指定来源的单车ID
+    const bikeIds = this.bikes
+      .filter(bike => bike.source === source)
+      .map(bike => bike.id);
+    
+    // 移除实体
+    bikeIds.forEach(id => this.removeBikeEntity(id));
+    
+    // 移除数据
+    this.bikes = this.bikes.filter(bike => bike.source !== source);
+    
+    return bikeIds.length;
+  }
+  
+  /**
+   * 清除非指定来源的单车（保留特定来源）
+   * @param {String} sourceToKeep - 要保留的数据来源
+   */
+  clearBikesExceptSource(sourceToKeep) {
+    // 找出非指定来源的单车ID
+    const bikeIds = this.bikes
+      .filter(bike => bike.source !== sourceToKeep)
+      .map(bike => bike.id);
+    
+    // 移除实体
+    bikeIds.forEach(id => this.removeBikeEntity(id));
+    
+    // 保留指定来源的数据
+    this.bikes = this.bikes.filter(bike => bike.source === sourceToKeep);
+    
+    return bikeIds.length;
+  }
+  
+  /**
+   * 清除所有billboard集合
+   */
+  clearAllBillboardCollections() {
+    for (const [name, collection] of this.billboardCollections.entries()) {
+      if (!collection.isDestroyed()) {
+        collection.destroy();
+      }
+    }
+    this.billboardCollections.clear();
   }
 
   /**
@@ -246,6 +565,9 @@ class BikeStore {
    * 警告：这将删除所有检测数据！
    */
   clearAllDetectionData() {
+    // 移除所有detection来源的实体
+    this.clearBikesBySource('detection');
+    
     this.detectedBikes.clear();
     this.previousDetectedBikes.clear();
     this.bikeTrackingInfo.clear();
@@ -294,7 +616,13 @@ class BikeStore {
    * @param {Object} bikeData - 单车数据
    */
   updateDetectedBike(id, bikeData) {
-    this.detectedBikes.set(id, bikeData);
+    // 添加来源标记
+    const bikeWithSource = {
+      ...bikeData,
+      source: 'detection'
+    };
+    
+    this.detectedBikes.set(id, bikeWithSource);
     
     // 更新统计信息
     this.detectionStats.total = this.detectedBikes.size;
@@ -310,6 +638,14 @@ class BikeStore {
     
     // 更新历史位置
     this.updateBikeHistoryPosition(id, bikeData);
+    
+    // 同时更新或创建实体
+    if (this.viewer && bikeData.longitude && bikeData.latitude) {
+      this.createBikeEntity({
+        ...bikeWithSource,
+        id: id
+      }, 'detection');
+    }
   }
 
   /**
