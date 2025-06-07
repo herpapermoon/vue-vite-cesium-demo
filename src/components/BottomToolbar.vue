@@ -71,8 +71,6 @@ const categories = [
           { id: 'billboard', label: '生成共享单车', icon: '📍' },
           { id: 'vision', label: '视域分析', icon: '👁️' },
           { id: 'visionAnalysis', label: '通视度分析', icon: '🔍' },
-        //  { id: 'tilesetFlow', label: '3D模型流', icon: '🏙️' },
-         // { id: 'measure', label: '测量工具', icon: '📏' }
         ]
       },
       {
@@ -97,60 +95,9 @@ const categories = [
           { id: 'fog', label: '雾天', icon: '🌫️' }
         ]
        },
-      // {
-      //   label: '水体特效',
-      //   tools: [
-      //     { id: 'riverFlood', label: '河流淹没', icon: '🌊' },
-      //     { id: 'riverDynamic', label: '动态河流', icon: '💧' }
-      //   ]
-      // },
-      // {
-      //   label: '动画特效',
-      //   tools: [
-      //     { id: 'spreadWall', label: '扩散墙', icon: '🧱' },
-      //     { id: 'spreadEllipse', label: '高危报警', icon: '⚠️' },
-      //     { id: 'flyline', label: '飞线连接', icon: '🧵' }
-      //   ]
-      // }
     ]
   },
-  // {
-  //   label: '航空模拟',
-  //   icon: '✈️',
-  //   subcategories: [
-  //     {
-  //       label: '飞行路径',
-  //       tools: [
-  //         { id: 'direct', label: '直飞路径', icon: '➡️' },
-  //         { id: 'round', label: '迂回路径', icon: '↪️' },
-  //         { id: 'circle', label: '环绕路径', icon: '🔄' }
-  //       ]
-  //     },
-  //     {
-  //       label: '雷达系统',
-  //       tools: [
-  //         { id: 'scan', label: '地面雷达', icon: '📡' },
-  //         { id: 'radarStatic', label: '菲涅尔区', icon: '📶' },
-  //         { id: 'radarDynamic', label: '空中雷达', icon: '📊' },
-  //         { id: 'trackPlane', label: '跟踪扫描', icon: '🔎' }
-  //       ]
-  //     }
-  //   ]
-  // },
-  // {
-  //   label: '数据展示',
-  //   icon: '📊',
-  //   subcategories: [
-  //     {
-  //       label: '可视化',
-  //       tools: [
-  //         { id: 'addEcharts', label: 'Echarts集成', icon: '📈' },
-  //         { id: 'sat', label: '卫星展示', icon: '🛰️' },
-  //         { id: 'drone', label: '无人机侦察', icon: '🚁' }
-  //       ]
-  //     }
-  //   ]
-  // }
+
 ];
 
 // 状态管理
@@ -216,7 +163,8 @@ const resetTool = (toolId) => {
 
 // 暴露方法给父组件
 defineExpose({
-  resetTool
+  resetTool,
+  isToolActive: (toolId) => activeTool.value === toolId
 });
 </script>
 

@@ -20,6 +20,19 @@
         <div class="collapse-btn" @click="toggleExpand">◀</div>
       </div>
       <div class="content-body">
+        <!-- 视觉识别控制区，仅在单车数据和单车管理Tab显示 -->
+        <template v-if="['bikes','bikeManage'].includes(currentTab.id)">
+          <div class="vision-control-bar">
+            <button class="vision-btn" :class="{active: visionActive}" @click="$emit('toggle-vision')">
+              <span v-if="!visionActive">🚲 启动视觉识别</span>
+              <span v-else>⏸️ 暂停视觉识别</span>
+            </button>
+            <span class="vision-status" :class="{active: visionActive}">
+              {{ visionActive ? '识别中' : '已暂停' }}
+            </span>
+            <button class="camera-setup-btn" @click="$emit('open-camera-setup')">📷 摄像头管理</button>
+          </div>
+        </template>
         <component :is="currentTab.component" />
       </div>
     </div>
@@ -31,11 +44,13 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+// import CityData from './sidebar/CityData.vue';
+// import Statistics from './sidebar/Statistics.vue';
+// import Resources from './sidebar/Resources.vue';
 import BikeStats from './sidebar/BikeStats.vue';
 import BikeManagement from './sidebar/BikeManagement.vue';
 import TripPlanner from './sidebar/TripPlanner.vue';
-import MetroStationQuery from './sidebar/MetroStationQuery.vue';
-import ParkingStatus from './sidebar/ParkingStatus.vue'; // 导入新组件
+import MetroStationQuery from './sidebar/MetroStationQuery.vue'; // 导入新组件
 
 // 状态管理
 const expanded = ref(true);
@@ -48,11 +63,13 @@ const currentTab = computed(() => {
 
 // 标签页定义
 const tabs = [
+ // { id: 'city', label: '城市数据', icon: '🏙️', component: CityData },
+  //{ id: 'stats', label: '统计视图', icon: '📊', component: Statistics },
   { id: 'bikes', label: '单车数据', icon: '🚲', component: BikeStats },
   { id: 'bikeManage', label: '单车管理', icon: '🔧', component: BikeManagement },
-  { id: 'parking', label: '车位状态', icon: '🅿️', component: ParkingStatus }, // 添加新标签页
   { id: 'tripPlanner', label: '出行规划', icon: '🗺️', component: TripPlanner },
-  { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery }
+   { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery }
+  //{ id: 'resources', label: '资源管理', icon: '📦', component: Resources }
 ];
 
 // 选择标签页
@@ -73,6 +90,11 @@ const showBikeStats = () => {
   activeTab.value = 'bikes';
   expanded.value = true;
 };
+
+// 新增props用于视觉识别状态和控制
+const props = defineProps({
+  visionActive: Boolean
+});
 
 defineExpose({
   showBikeStats
@@ -211,17 +233,49 @@ defineExpose({
     background: var(--cl-hover);
   }
 }
-</style>
 
-<style>
-:root {
-  /* 已有的变量保持不变 */
-  
-  /* 添加新变量 */
-  --cl-success: #4caf50;
-  --cl-warning: #ff9800;
-  --cl-panel-dark: rgba(20, 40, 70, 0.95);
-  --cl-panel-light: rgba(30, 50, 80, 0.95);
-  --cl-text-secondary: #a0a0a0;
+.vision-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 6px 0 6px 0;
+  border-bottom: 1px solid var(--cl-border);
+}
+.vision-btn {
+  background: var(--cl-primary);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+.vision-btn.active {
+  background: #e74c3c;
+}
+.vision-status {
+  font-size: 13px;
+  color: #888;
+  padding: 0 8px;
+}
+.vision-status.active {
+  color: #00c48f;
+  font-weight: bold;
+}
+.camera-setup-btn {
+  background: var(--cl-secondary);
+  color: var(--cl-text);
+  border: 1px solid var(--cl-border);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.camera-setup-btn:hover {
+  background: var(--cl-hover);
 }
 </style>
