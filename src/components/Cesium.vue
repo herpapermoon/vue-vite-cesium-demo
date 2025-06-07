@@ -13,7 +13,12 @@
   </div>
   
   <!-- 左侧边栏 - 城市数据和统计视图 -->
-  <LeftSidebar ref="leftSidebarRef" />
+  <LeftSidebar 
+    ref="leftSidebarRef" 
+    :visionActive="detectionActive" 
+    @toggle-vision="toggleDetection" 
+    @open-camera-setup="openCameraSetup" 
+  />
   
   <!-- 底部工具栏 - 功能和工具集合 -->
   <BottomToolbar @toolActivated="btnClickHandler" ref="toolbarRef" />
@@ -30,14 +35,13 @@
     @camera-activated="onCameraActivated"
   />
   
-  <!-- 实时视频流容器，改为v-show而不是class控制显示隐藏 -->
+  <!-- 实时视频流容器，精简UI -->
   <div id="videoContainer" class="h5videodiv" v-show="videoShow" ref="videoContainerRef">
     <div class="video-header">
       <span>监控视频</span>
       <div class="video-controls">
-        <button @click="toggleDetection" :class="{ active: detectionActive }">{{ detectionActive ? '停止识别' : '启动识别' }}</button>
-        <button @click="toggleVideoPlay"><img :src="play" alt="播放/暂停"></button>
-        <button @click="cameraSetupVisible = !cameraSetupVisible" :class="{ active: cameraSetupVisible }">摄像头设置</button>
+        <button @click="toggleDetection" :class="{ active: detectionActive }">{{ detectionActive ? '暂停识别' : '启动识别' }}</button>
+        <button @click="cameraSetupVisible = !cameraSetupVisible" :class="{ active: cameraSetupVisible }">摄像头管理</button>
         <button @click="closeVideoContainer" class="close-btn">✕</button>
       </div>
     </div>
@@ -62,21 +66,15 @@
       <!-- 检测画布直接在这里创建，不通过JS动态创建 -->
       <canvas id="detectionCanvas" class="detection-canvas"></canvas>
     </div>
-    <div class="detection-stats" v-if="detectionActive">
-      <div class="stat-row">
-        <div class="stat-label">当前帧单车:</div>
-        <div class="stat-value" :class="{ 'has-bikes': detectedBikesCount > 0 }">{{ detectedBikesCount }}</div>
-      </div>
-      <div class="stat-note" v-if="detectedBikesCount > 0">
-        实时检测中...（检测数: {{detectedBikesCount}}）
-      </div>
-      <div class="stat-note" v-else>
-        等待检测到单车...
-      </div>
-    </div>
-    <div class="camera-status" v-if="activeCameraName">
-      <div class="camera-status-label">当前摄像头:</div>
-      <div class="camera-status-value">{{ activeCameraName }}</div>
+    <!-- 状态与统计合并为一行 -->
+    <div class="detection-status-bar">
+      <span class="status-label" :class="{active: detectionActive}">
+        {{ detectionActive ? '识别中' : '已暂停' }}
+      </span>
+      <span class="camera-status-label" v-if="activeCameraName">
+        | 摄像头: <span class="camera-name">{{ activeCameraName }}</span>
+      </span>
+      <span class="stat-label">| 当前帧单车: <span class="stat-value" :class="{ 'has-bikes': detectedBikesCount > 0 }">{{ detectedBikesCount }}</span></span>
     </div>
   </div>
   
@@ -105,34 +103,17 @@ import BikeDetection from '@/cesiumUtils/bikeDetection'
 
 // 导入各种Cesium功能模块
 import { initCesium } from '@/cesiumUtils/initCesium'
-//import '@/cesiumUtils/flowLine'
-//import '@/cesiumUtils/waveMaterial'
-//import '@/cesiumUtils/wallDiffuse'
 import { setRain, setSnow, setFog } from '@/cesiumUtils/cesiumEffects'
-//import SatRoaming from '@/cesiumUtils/satelliteRoaming'
 import { setScan } from '@/cesiumUtils/scan'
-//import { setFlyline, flyLineDestroy } from '@/cesiumUtils/flyline'
-//import { setSpreadEllipse, destroy as SpreadDestroy } from '@/cesiumUtils/spreadEllipse'
 import { randomGenerateBillboards, destroyBillboard } from '@/cesiumUtils/randomPoints'
-//import { setEmitter } from '@/cesiumUtils/emitter'
-//import { setRadarStaticScan } from '@/cesiumUtils/radarStaticScan'
-//import { setRadarDynamicScan } from '@/cesiumUtils/radarDynamicScan'
 import ViewShed from '@/cesiumUtils/ViewShed'
-//import TilesetFlow from '@/cesiumUtils/tilesetFlow'
 import * as paths from '@/assets/paths'
 import ImportPlane from '@/cesiumUtils/importPlane'
 import DrawLines from '@/cesiumUtils/drawLines'
-//import { drawLinesAndAirplane, settleBaseRadarCarRadio, destoryDrone } from '@/cesiumUtils/planeRoam'
 import { addGeojson, removeGeojson } from '@/cesiumUtils/addGeojson'
-//import { WallRegularDiffuse, removeWall } from '@/cesiumUtils/wallRegularDiffuse'
 import gerateSatelliteLines from '@/mocks/satellitePath'
-//import { initVedeo, toggleVideo } from '@/cesiumUtils/rtsp'
 import { VisionAnalysis, analysisVisible, clearLine } from '@/cesiumUtils/visionAnalysis'
-//import { setRiverFlood } from '@/cesiumUtils/riverFlood'
-//import { setRiverDynamic } from '@/cesiumUtils/riverDynamic'
-//import { setTrackPlane } from '@/cesiumUtils/trackPalne'
 import { setWhiteBuild } from '@/cesiumUtils/whiteBuild'
-//import { addEcharts } from '@/cesiumUtils/addEcharts'
 import { langRef, lang } from '@/cesiumUtils/i18n'
 
 // 导入测量工具
@@ -203,6 +184,33 @@ const showMeasure = () => {
   })
 }
 
+// 注册bikeDetector事件的函数，确保只注册一次
+function registerBikeDetectorEvents() {
+  if (!bikeDetector || bikeDetector._eventsRegistered) return;
+  bikeDetector.on('detection', (data) => {
+    detectedBikesCount.value = data?.count || 0;
+  });
+  bikeDetector.on('error', (error) => {
+    showNotification('视觉识别', `检测错误: ${error.message}`, 'error');
+  });
+  bikeDetector.on('positionUpdate', (data) => {
+    if (leftSidebarRef.value && typeof leftSidebarRef.value.updateBikeStats === 'function') {
+      leftSidebarRef.value.updateBikeStats(data.stats);
+    }
+  });
+  bikeDetector._eventsRegistered = true;
+}
+
+// 打开摄像头管理前确保bikeDetector已初始化
+const openCameraSetup = async () => {
+  if (!bikeDetector) {
+    bikeDetector = new BikeDetection(viewer3D);
+    await bikeDetector.initialize('h5sVideo1');
+    registerBikeDetectorEvents();
+  }
+  cameraSetupVisible.value = true;
+};
+
 // 切换单车视觉识别的开关
 const toggleDetection = async () => {
   try {
@@ -215,19 +223,11 @@ const toggleDetection = async () => {
       return;
     }
     
-    // 重要：尊重videoShow状态
-    // 如果视频容器被主动隐藏，不应该在此处强制显示
-    // 仅当用户通过工具栏激活时才显示视频
-    if (!videoShow.value && toolbarRef.value?.isToolActive('bikeDetection')) {
-      console.log('显示视频容器（通过工具栏激活）');
+    // 只要入口触发，未显示视频窗口时都自动显示
+    if (!videoShow.value) {
       videoShow.value = true;
-      
       // 给Vue一点时间更新DOM
       await new Promise(resolve => setTimeout(resolve, 100));
-    } else if (!videoShow.value) {
-      // 如果视频容器隐藏且非工具栏激活，则不应继续
-      console.log('视频容器隐藏且非工具栏激活状态，不执行检测');
-      return;
     }
     
     // 确保视频元素存在
@@ -299,18 +299,7 @@ const toggleDetection = async () => {
         return;
       }
     }
-    
-    // 如果视频已暂停，尝试播放
-    if (videoElement.paused) {
-      try {
-        await videoElement.play();
-        console.log('视频播放已开始');
-      } catch (e) {
-        console.warn('无法自动播放视频，需要用户交互:', e);
-        showNotification('视频播放', '请点击视频区域开始播放', 'info');
-      }
-    }
-    
+     
     // 初始化或切换检测
     if (detectionActive.value) {
       // 已在检测中，停止检测
@@ -323,79 +312,6 @@ const toggleDetection = async () => {
     } else {
       // 未在检测，开始检测
       console.log('准备启动单车检测...');
-      
-      // 初始化检测器（如果尚未初始化）
-      if (!bikeDetector) {
-        console.log('初始化单车检测器...');
-        bikeDetector = new BikeDetection(viewer3D);
-        
-        // 注册事件监听器
-        bikeDetector.on('detection', (data) => {
-          console.log('收到检测事件:', data?.count || 0, '辆单车');
-          // 更新UI
-          detectedBikesCount.value = data?.count || 0;
-          
-          // 更新底部统计信息(如果存在)
-          const detectionStats = document.querySelector('.detection-stats');
-          if (detectionStats) {
-            // 更新检测数量值
-            const countEl = detectionStats.querySelector('.stat-value');
-            if (countEl) {
-              countEl.textContent = data.count;
-              countEl.classList.toggle('has-bikes', data.count > 0);
-            }
-            
-            // 更新底部提示文本
-            const noteEls = detectionStats.querySelectorAll('.stat-note');
-            noteEls.forEach(el => {
-              el.style.display = 'none';
-            });
-            
-            if (data.count > 0) {
-              const activeNote = detectionStats.querySelector('.stat-note:first-of-type');
-              if (activeNote) {
-                activeNote.style.display = 'block';
-                activeNote.textContent = `实时检测中...（检测数: ${data.count}）`;
-              }
-            } else {
-              const waitingNote = detectionStats.querySelector('.stat-note:last-of-type');
-              if (waitingNote) {
-                waitingNote.style.display = 'block';
-              }
-            }
-          }
-        });
-        
-        bikeDetector.on('error', (error) => {
-          console.error('检测器错误:', error);
-          showNotification('视觉识别', `检测错误: ${error.message}`, 'error');
-        });
-        
-        // 监听位置更新事件
-        bikeDetector.on('positionUpdate', (data) => {
-          console.log('单车位置更新:', data.bikes?.length, '辆单车');
-          
-          // 如果左侧边栏存在并有显示单车统计的方法，则调用
-          if (leftSidebarRef.value && typeof leftSidebarRef.value.updateBikeStats === 'function') {
-            leftSidebarRef.value.updateBikeStats(data.stats);
-          }
-        });
-        
-        const initSuccess = await bikeDetector.initialize('h5sVideo1');
-        
-        if (!initSuccess) {
-          showNotification('视觉识别', '初始化单车检测模块失败', 'error');
-          return;
-        }
-        
-        console.log('单车检测器初始化成功');
-        
-        // 检查是否有可用的摄像头，如果没有则提示添加
-        if (bikeDetector.cameraManager.cameras.size === 0) {
-          showNotification('摄像头管理', '请添加摄像头以启用位置检测功能', 'info');
-          cameraSetupVisible.value = true;
-        }
-      }
       
       // 确保视频正在播放
       if (videoElement.paused) {
@@ -446,12 +362,6 @@ const onVideoLoaded = (event) => {
   console.log('视频数据已加载:', event.target.videoWidth, 'x', event.target.videoHeight);
   showNotification('视频加载', '监控视频加载成功', 'info');
   
-  // 如果启用了自动检测，加载完成后自动开始
-  if (videoShow.value && !detectionActive.value && autoStartDetection.value) {
-    setTimeout(() => {
-      toggleDetection();
-    }, 1000);
-  }
 }
 
 // 视频元数据加载完成事件
@@ -460,57 +370,27 @@ const onVideoMetadata = (event) => {
     '时长=', event.target.duration, 
     '尺寸=', event.target.videoWidth, 'x', event.target.videoHeight);
   
-  // 尝试立即播放
-  try {
-    event.target.play().catch(err => console.warn('元数据加载后播放失败:', err));
-  } catch (e) {
-    console.warn('尝试播放视频时出错:', e);
-  }
 }
 
 // 视频可以播放事件
 const onVideoCanPlay = (event) => {
   console.log('视频可以播放了');
   
-  // 如果启用了自动检测且还未开始检测，在可以播放时启动
-  if (autoStartDetection.value && !detectionActive.value) {
-    setTimeout(() => {
-      if (!detectionActive.value) {
-        console.log('视频可播放，自动启动检测');
-        toggleDetection();
-      }
-    }, 500);
-  }
+
 }
 
 // 视频加载失败事件
 const onVideoError = (error) => {
-  const videoElement = error.target;
-  console.error('视频加载错误:', error, 
-    videoElement.error ? `错误代码: ${videoElement.error.code}` : '');
-  
-  showNotification('视频加载', `监控视频加载失败: ${videoElement.error ? videoElement.error.message : '未知错误'}`, 'error');
-  
-  // 尝试使用备用视频
-  setTimeout(() => {
-    if (videoElement && !videoElement.src.includes('fallback')) {
-      console.log('尝试加载备用视频...');
-      videoElement.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-      videoElement.load();
-    }
-  }, 2000);
 }
 
 // 关闭视频容器
 const closeVideoContainer = () => {
   console.log('关闭视频容器');
-  
-  // 暂停检测，但保留数据
+  // 暂停检测，并同步状态
   if (detectionActive.value && bikeDetector) {
     bikeDetector.pauseDetection();
     detectionActive.value = false;
   }
-  
   // 清理视频元素
   const videoElement = document.getElementById('h5sVideo1');
   if (videoElement) {
@@ -518,18 +398,15 @@ const closeVideoContainer = () => {
     videoElement.src = '';
     videoElement.load();
   }
-  
   // 隐藏视频容器和摄像头设置面板
   videoShow.value = false;
   cameraSetupVisible.value = false;
-  
-  // 重置工具栏状态
+  // 重置工具栏状态（可选）
   if (toolbarRef.value?.isToolActive('bikeDetection')) {
     toolbarRef.value.resetTool('bikeDetection');
   }
-  
   showNotification('单车管理', '已关闭检测窗口（数据已保留）', 'info');
-}
+};
 
 // 通用功能调用函数，根据按钮激活状态决定执行成功或失败的回调
 const caller = (isActive, resolve, reject) => {
@@ -545,27 +422,6 @@ const back2Home = () => {
   document.querySelector('.cesium-home-button').click()
 }
 
-// 设置飞机路径
-const setPlanePath = (viewer, arr, pos, addr) => {
-  // 创建飞机模型
-  const plane = new ImportPlane(viewer, {
-    uri: `${import.meta.env.VITE_BUILD_PATH_PREFIX}/models/CesiumAir.glb`,
-    position: arr,
-    addr,
-    arrPos: pos,
-    maxLength: (arr.length - 1),
-    reduce: pos + 1
-  })
-  // 创建飞行线路
-  const line = new DrawLines(viewer, {
-    lines: arr,
-    model: plane.entity
-  })
-  return {
-    plane,
-    line
-  }
-}
 
 // 设置路线函数
 const setRoutes = (type = 'direct') => {
@@ -574,26 +430,7 @@ const setRoutes = (type = 'direct') => {
   return setPlanePath(viewer3D, pathArr[0], (addresses.length - 1), addresses)
 }
 
-// 销毁飞机和路线
-const destroyPlaneLine = (flyObj) => {
-  if (flyObj) {
-    const { plane, line } = flyObj
-    plane.destroy()
-    line.removeLine()
-  }
-}
 
-// 销毁所有飞行路线和无人机
-const destroyOther = () => {
-  destroyPlaneLine(direct)
-  destroyPlaneLine(round)
-  destroyPlaneLine(circle)
-  if (clickedDrone.value) {
-    videoShow.value = false
-    toggleVideo('h5sVideo1')
-    destoryDrone(viewer3D)
-  }
-}
 
 // 显示通知消息
 const showNotification = (title, message, type = 'info') => {
@@ -639,21 +476,6 @@ const btnClickHandler = (btn) => {
       })
       break
     }
-    case 'sat': {
-      // 卫星显示
-      caller(active, () => {
-        back2Home()
-        sat = new SatRoaming(viewer3D, {
-          uri: `${import.meta.env.VITE_BUILD_PATH_PREFIX}/models/Satellite.glb`,
-          Lines: gerateSatelliteLines(0, 0)
-        })
-        showNotification('卫星漫游', '已启动卫星模拟', 'info')
-      }, () => {
-        sat?.EndRoaming()
-        showNotification('卫星漫游', '已停止卫星模拟', 'info')
-      })
-      break
-    }
     case 'vision': {
   // 视域分析
   caller(active, () => {
@@ -671,19 +493,6 @@ const btnClickHandler = (btn) => {
   break;
 }
 
-    case 'tilesetFlow': {
-      // 3D模型流动效果
-      caller(active, () => {
-        tileset = new TilesetFlow(viewer3D)
-        showNotification('3D模型流', '已启动模型流动效果', 'info')
-      }, () => {
-        back2Home()
-        tileset.clear()
-        showNotification('3D模型流', '已清除模型流动效果', 'info')
-      })
-      break
-    }
-    // 替换visionAnalysis的处理逻辑
 case 'visionAnalysis': {
   // 可视性分析
   let visionAnalysisInstance = null; // 修改变量名避免与导入的类名冲突
@@ -718,38 +527,7 @@ case 'visionAnalysis': {
       })
       break
     }
-    case 'spreadWall': {
-      // 扩散墙效果
-      caller(active, () => {
-        const viewPosition = [116.390646, 39.9126084]
-        viewer3D.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(
-            viewPosition[0], viewPosition[1] - 0.04,
-            1000
-          ),
-          orientation: {
-            heading: Cesium.Math.toRadians(0, 0),
-            pitch: Cesium.Math.toRadians(-20),
-            roll: 0.0
-          }
-        })
-        WallRegularDiffuse({
-          viewer: viewer3D,
-          center: viewPosition,
-          radius: 400.0,
-          edge: 50,
-          height: 50.0,
-          speed: 15,
-          minRidus: 100
-        })
-        showNotification('特效', '已启用扩散墙效果', 'info')
-      }, () => {
-        back2Home()
-        removeWall(viewer3D)
-        showNotification('特效', '已移除扩散墙效果', 'info')
-      })
-      break
-    }
+
     case 'terrain': {
       // 地形展示
       if (active) {
@@ -765,70 +543,6 @@ case 'visionAnalysis': {
       } else {
         back2Home()
         showNotification('地形展示', '已返回默认视图', 'info')
-      }
-      break
-    }
-    case 'direct': {
-      // 直线飞行
-      destroyOther()
-      caller(active, () => {
-        direct = setRoutes('direct')
-        showNotification('飞行路径', '已启动直线飞行路径', 'info')
-      }, () => {
-        back2Home()
-        showNotification('飞行路径', '已清除飞行路径', 'info')
-      })
-      break
-    }
-    case 'round': {
-      // 迂回飞行
-      destroyOther()
-      caller(active, () => {
-        round = setRoutes('round')
-        showNotification('飞行路径', '已启动迂回飞行路径', 'info')
-      }, () => {
-        back2Home()
-        showNotification('飞行路径', '已清除飞行路径', 'info')
-      })
-      break
-    }
-    case 'circle': {
-      // 环绕飞行
-      destroyOther()
-      caller(active, () => {
-        circle = setRoutes('circle')
-        showNotification('飞行路径', '已启动环绕飞行路径', 'info')
-      }, () => {
-        back2Home()
-        showNotification('飞行路径', '已清除飞行路径', 'info')
-      })
-      break
-    }
-    case 'drone': {
-      // 无人机检测（视频流）
-      caller(active, () => {
-        destroyOther()
-        settleBaseRadarCarRadio(viewer3D)
-        drawLinesAndAirplane(viewer3D)
-        initVedeo('h5sVideo1')
-        videoShow.value = !videoShow.value
-        clickedDrone.value = true
-        showNotification('无人机侦察', '已启动无人机视频流', 'info')
-      }, () => {
-        destroyOther()
-        back2Home()
-        showNotification('无人机侦察', '已关闭无人机视频流', 'info')
-      })
-      break
-    }
-    case 'scan': {
-      // 地面雷达扫描
-      back2Home()
-      setScan(viewer3D, !active)
-      if (active) {
-        showNotification('雷达扫描', '已启动地面雷达扫描', 'info')
-      } else {
-        showNotification('雷达扫描', '已关闭地面雷达扫描', 'info')
       }
       break
     }
@@ -865,75 +579,6 @@ case 'visionAnalysis': {
       })
       break
     }
-    case 'flyline': {
-      // 飞线效果
-      if (active) {
-        back2Home()
-        setFlyline(viewer3D)
-        showNotification('特效', '已启动飞线效果', 'info')
-      } else {
-        flyLineDestroy(viewer3D)
-        showNotification('特效', '已关闭飞线效果', 'info')
-      }
-      break
-    }
-    case 'spreadEllipse': {
-      // 高风险警报（扩散椭圆）
-      if (active) {
-        back2Home()
-        setSpreadEllipse(viewer3D)
-        showNotification('警报', '已激活高风险警报', 'warning')
-      } else {
-        SpreadDestroy(viewer3D)
-        showNotification('警报', '已解除高风险警报', 'info')
-      }
-      break
-    }
-    case 'radarStatic': {
-      // 菲涅尔区（静态雷达）
-      back2Home()
-      setRadarStaticScan(viewer3D, active)
-      setEmitter(viewer3D, active)
-      if (active) {
-        showNotification('雷达', '已启动菲涅尔区展示', 'info')
-      } else {
-        showNotification('雷达', '已关闭菲涅尔区展示', 'info')
-      }
-      break
-    }
-    case 'radarDynamic': {
-      // 空中雷达
-      back2Home()
-      setRadarDynamicScan(viewer3D, active)
-      if (active) {
-        showNotification('雷达', '已启动空中雷达展示', 'info')
-      } else {
-        showNotification('雷达', '已关闭空中雷达展示', 'info')
-      }
-      break
-    }
-    case 'riverFlood': {
-      // 河流洪水效果
-      back2Home()
-      setRiverFlood(viewer3D, active)
-      if (active) {
-        showNotification('水文模拟', '已启动河流淹没效果', 'warning')
-      } else {
-        showNotification('水文模拟', '已关闭河流淹没效果', 'info')
-      }
-      break
-    }
-    case 'riverDynamic': {
-      // 动态河流效果
-      back2Home()
-      setRiverDynamic(viewer3D, active)
-           if (active) {
-        showNotification('水文模拟', '已启动动态河流效果', 'info')
-      } else {
-        showNotification('水文模拟', '已关闭动态河流效果', 'info')
-      }
-      break
-    }
     case 'trackPlane': {
       // 跟踪扫描
       back2Home()
@@ -954,90 +599,6 @@ case 'visionAnalysis': {
         showNotification('建筑展示', '已关闭白模建筑效果', 'info')
       }
       break
-    }
-    case 'bikeDetection': {
-      // 单车视觉识别
-      caller(active, async () => {
-        console.log('激活单车视觉识别功能');
-        
-        // 显示视频流
-        videoShow.value = true;
-        
-        // 等待DOM更新
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // 初始化测试视频源
-        const videoElement = document.getElementById('h5sVideo1');
-        if (videoElement) {
-          console.log('找到视频元素，准备加载视频源');
-          
-          try {
-            // 使用测试视频源 - 注意vite开发服务器的路径是相对于根目录的
-            const videoUrl = window.location.hostname === 'localhost' 
-              ? '/assets/VCG2214050653.mp4'  // 开发环境
-              : './assets/VCG2214050653.mp4'; // 生产环境
-              
-            console.log('设置视频源:', videoUrl);
-            videoElement.src = videoUrl;
-            
-            // 确保视频预加载
-            videoElement.preload = 'auto';
-            videoElement.load();
-            
-            // 尝试自动播放
-            try {
-              await videoElement.play();
-              console.log('视频已自动播放');
-            } catch (e) {
-              console.warn('无法自动播放视频，需要用户交互');
-              videoElement.controls = true;
-            }
-          } catch (err) {
-            console.error('加载视频失败:', err);
-            showNotification('视频加载', '无法加载视频，请检查资源路径', 'error');
-          }
-        }
-        
-        // 启动单车视觉识别
-        await toggleDetection();
-        
-        // 如果没有摄像头，自动显示摄像头设置面板
-        if (bikeDetector && bikeDetector.cameraManager.cameras.size === 0) {
-          cameraSetupVisible.value = true;
-          showNotification('摄像头管理', '请添加摄像头以启用位置检测功能', 'info');
-        }
-        
-        showNotification('单车管理', '已启动单车视觉识别模式', 'info');
-      }, async () => {
-        console.log('停用单车视觉识别功能');
-        
-        // 停止单车检测
-        if (detectionActive.value) {
-          // 使用pauseDetection而非stopDetection，保留数据
-          if (bikeDetector) {
-            bikeDetector.pauseDetection();
-            detectionActive.value = false;
-          } else {
-            await toggleDetection();
-          }
-        }
-        
-        // 清理视频元素
-        const videoElement = document.getElementById('h5sVideo1');
-        if (videoElement) {
-          videoElement.pause();
-          videoElement.src = '';
-          videoElement.load();
-        }
-        
-        // 关闭视频流和摄像头设置面板
-        videoShow.value = false;
-        cameraSetupVisible.value = false;
-        
-        back2Home();
-        showNotification('单车管理', '已退出单车视觉识别模式（数据已保留）', 'info');
-      });
-      break;
     }
     case 'addEcharts': {
       // 结合ECharts
@@ -1318,6 +879,43 @@ onMounted(() => {
       height: 12px;
     }
   }
+}
+
+.detection-status-bar {
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+.status-label {
+  color: #888;
+}
+.status-label.active {
+  color: #00c48f;
+  font-weight: bold;
+}
+.camera-status-label {
+  color: #00bfff;
+}
+.camera-name {
+  font-weight: bold;
+  color: #fff;
+}
+.stat-label {
+  color: #aaa;
+}
+.stat-value {
+  font-weight: bold;
+  color: #fff;
+  margin-left: 2px;
+}
+.stat-value.has-bikes {
+  color: #00ff64;
+  text-shadow: 0 0 3px #00ff64;
 }
 </style>
 

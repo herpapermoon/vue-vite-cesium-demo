@@ -20,6 +20,19 @@
         <div class="collapse-btn" @click="toggleExpand">◀</div>
       </div>
       <div class="content-body">
+        <!-- 视觉识别控制区，仅在单车数据和单车管理Tab显示 -->
+        <template v-if="['bikes','bikeManage'].includes(currentTab.id)">
+          <div class="vision-control-bar">
+            <button class="vision-btn" :class="{active: visionActive}" @click="$emit('toggle-vision')">
+              <span v-if="!visionActive">🚲 启动视觉识别</span>
+              <span v-else>⏸️ 暂停视觉识别</span>
+            </button>
+            <span class="vision-status" :class="{active: visionActive}">
+              {{ visionActive ? '识别中' : '已暂停' }}
+            </span>
+            <button class="camera-setup-btn" @click="$emit('open-camera-setup')">📷 摄像头管理</button>
+          </div>
+        </template>
         <component :is="currentTab.component" />
       </div>
     </div>
@@ -77,6 +90,11 @@ const showBikeStats = () => {
   activeTab.value = 'bikes';
   expanded.value = true;
 };
+
+// 新增props用于视觉识别状态和控制
+const props = defineProps({
+  visionActive: Boolean
+});
 
 defineExpose({
   showBikeStats
@@ -214,5 +232,50 @@ defineExpose({
   &:hover {
     background: var(--cl-hover);
   }
+}
+
+.vision-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 6px 0 6px 0;
+  border-bottom: 1px solid var(--cl-border);
+}
+.vision-btn {
+  background: var(--cl-primary);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+.vision-btn.active {
+  background: #e74c3c;
+}
+.vision-status {
+  font-size: 13px;
+  color: #888;
+  padding: 0 8px;
+}
+.vision-status.active {
+  color: #00c48f;
+  font-weight: bold;
+}
+.camera-setup-btn {
+  background: var(--cl-secondary);
+  color: var(--cl-text);
+  border: 1px solid var(--cl-border);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.camera-setup-btn:hover {
+  background: var(--cl-hover);
 }
 </style>
