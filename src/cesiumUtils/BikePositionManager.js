@@ -78,7 +78,7 @@ class BikePositionManager {
    * @param {number} videoWidth 视频宽度
    * @param {number} videoHeight 视频高度
    */
-  updateFromDetection(bikes, videoWidth, videoHeight) {
+  async updateFromDetection(bikes, videoWidth, videoHeight) {
     try {
       // 验证输入参数
       if (!Array.isArray(bikes) || !this.isValidNumber(videoWidth) || !this.isValidNumber(videoHeight) || 
@@ -97,8 +97,9 @@ class BikePositionManager {
       const updatedBikeIds = new Set();
       const currentTime = Date.now();
       const bikesWithPositions = [];
-      
-      // 更新或创建单车实体
+      const geoTasks = [];
+
+      // 1. 先收集所有单车的地理坐标
       for (const bike of bikes) {
         // 验证单车数据
         if (!bike || !bike.id || !this.isValidNumber(bike.x) || !this.isValidNumber(bike.y) || 
@@ -110,76 +111,76 @@ class BikePositionManager {
         // 根据检测类型确定单车类型
         const bikeType = bike.type === 'bicycle' ? 'bicycle' : 
                         bike.type === 'motorcycle' ? 'motorcycle' : 'unknown';
-        
-        // 计算单车的地理坐标
         // 使用单车在图像中的底部中心点作为坐标点
         const bottomCenterX = bike.x;
         const bottomCenterY = bike.y + bike.height / 2;
-        
-        // 估计单车距离（可根据单车大小调整）
+        // 估计单车距离
         const estimatedDistance = this.estimateDistance(bike.width, bike.height, bikeType);
-        
-        // 验证距离是否有效
         if (!this.isValidNumber(estimatedDistance) || estimatedDistance <= 0) {
           console.warn('单车距离估计无效:', estimatedDistance);
           continue;
         }
-        
         // 将图像坐标转换为地理坐标
         const geoPosition = this.cameraManager.pixelToGeographic(
           bottomCenterX, bottomCenterY, videoWidth, videoHeight, estimatedDistance
         );
-        
-        // 如果坐标转换失败，跳过该单车
         if (!geoPosition || geoPosition.length !== 3) {
           console.warn('单车坐标转换失败:', { bottomCenterX, bottomCenterY, estimatedDistance });
           continue;
         }
-        
         const [longitude, latitude, altitude] = geoPosition;
-        
-        // 验证地理坐标有效性
         if (!this.isValidNumber(longitude) || !this.isValidNumber(latitude) || 
             Math.abs(longitude) > 180 || Math.abs(latitude) > 90) {
           console.warn('单车地理坐标无效:', { longitude, latitude, altitude });
           continue;
         }
-        
         // 记录更新的单车ID
         updatedBikeIds.add(bike.id);
-        
-        // 创建一个包含地理位置的单车数据对象
+        // 异步采样地形高度
+        geoTasks.push({
+          bike,
+          longitude,
+          latitude,
+          altitude,
+          bikeType
+        });
+      }
+
+      // 2. 批量采样地形高度
+      let terrainHeights = [];
+      if (geoTasks.length > 0 && this.viewer && this.viewer.terrainProvider) {
+        const cartographics = geoTasks.map(t => Cesium.Cartographic.fromDegrees(t.longitude, t.latitude));
+        try {
+          terrainHeights = await Cesium.sampleTerrainMostDetailed(this.viewer.terrainProvider, cartographics);
+        } catch (terrErr) {
+          console.warn('地形采样失败，使用默认高度', terrErr);
+          terrainHeights = cartographics.map(() => ({ height: 0 }));
+        }
+      } else {
+        terrainHeights = geoTasks.map(() => ({ height: 0 }));
+      }
+
+      // 3. 生成带有地表高度的单车数据
+      for (let i = 0; i < geoTasks.length; i++) {
+        const { bike, longitude, latitude, bikeType } = geoTasks[i];
+        const groundHeight = terrainHeights[i]?.height ?? 0;
+        // 让单车比地表高1米，且不低于地表
+        const finalHeight = Math.max(groundHeight, 0) + 1;
         const bikeWithPosition = {
           ...bike,
           longitude,
           latitude,
-          height: this.defaultHeight,
+          height: finalHeight,
           detectionTime: currentTime,
           cameraId: activeCamera.id,
           cameraName: activeCamera.name,
-          status: 'detected', // 设置状态为检测到
-          source: 'detection' // 标记来源为视觉检测
+          status: 'detected',
+          source: 'detection'
         };
-        
         bikesWithPositions.push(bikeWithPosition);
-        
-        // 使用BikeStore更新单车数据和实体
         bikeStore.updateDetectedBike(bike.id, bikeWithPosition);
       }
-      
-      // 将单车数据保存到BikeStore
-      if (bikesWithPositions.length > 0) {
-        try {
-          // 批量更新单车数据到BikeStore - 现在在上面直接更新了，这里不需要
-          // bikeStore.updateDetectedBikes(bikesWithPositions);
-          
-          // 移除不再检测到的单车实体（避免闪烁，先不处理）
-          // 实现保留最后位置的机制由BikeStore和BikeDetection协同完成
-        } catch (storeError) {
-          console.error('更新BikeStore数据时出错:', storeError);
-        }
-      }
-      
+
       // 更新热力图（如果启用）
       if (this.heatmapEnabled) {
         try {
@@ -188,7 +189,7 @@ class BikePositionManager {
           console.warn('更新热力图时出错:', heatmapError);
         }
       }
-      
+
       // 获取统计数据
       let stats;
       try {
@@ -197,7 +198,7 @@ class BikePositionManager {
         console.warn('获取单车统计信息时出错:', statsError);
         stats = { total: bikesWithPositions.length };
       }
-      
+
       // 触发位置更新事件
       this.emit('positionUpdate', {
         bikes: bikesWithPositions,
