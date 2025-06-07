@@ -78,6 +78,11 @@
         <input v-model.number="form.maxDistance" placeholder="最大可视距离" type="number" min="1" />
       </div>
       
+      <div class="form-group">
+        <label>视频流地址</label>
+        <input v-model="form.videoUrl" placeholder="输入视频流URL" />
+      </div>
+      
       <div class="form-actions">
         <button class="cancel-btn" @click="cancelEdit">取消</button>
         <button class="save-btn" @click="saveCamera">保存</button>
@@ -131,7 +136,8 @@ const form = ref({
   roll: 0,
   horizontalFOV: 60,
   verticalFOV: 45,
-  maxDistance: 100
+  maxDistance: 100,
+  videoUrl: ''
 });
 
 // 位置选择状态
@@ -203,7 +209,8 @@ const addNewCamera = () => {
     roll: 0,
     horizontalFOV: 60,
     verticalFOV: 45,
-    maxDistance: 100
+    maxDistance: 100,
+    videoUrl: ''
   };
   
   editMode.value = false;
@@ -224,7 +231,8 @@ const editCamera = (camera) => {
     roll: camera.direction[2],
     horizontalFOV: props.bikeDetector.cameraManager.cameras.get(camera.id).horizontalFOV,
     verticalFOV: props.bikeDetector.cameraManager.cameras.get(camera.id).verticalFOV,
-    maxDistance: props.bikeDetector.cameraManager.cameras.get(camera.id).maxDistance
+    maxDistance: props.bikeDetector.cameraManager.cameras.get(camera.id).maxDistance,
+    videoUrl: props.bikeDetector.cameraManager.cameras.get(camera.id).videoUrl
   };
   
   editMode.value = true;
@@ -249,7 +257,8 @@ const saveCamera = () => {
     direction: [form.value.heading, form.value.pitch, form.value.roll],
     horizontalFOV: form.value.horizontalFOV,
     verticalFOV: form.value.verticalFOV,
-    maxDistance: form.value.maxDistance
+    maxDistance: form.value.maxDistance,
+    videoUrl: form.value.videoUrl
   };
   
   if (editMode.value && editingCameraId.value) {
@@ -336,7 +345,8 @@ const togglePositionPicker = () => {
                 roll: 0,
                 horizontalFOV: 60,
                 verticalFOV: 45,
-                maxDistance: 100
+                maxDistance: 100,
+                videoUrl: ''
               };
               
               editMode.value = false;
@@ -360,7 +370,8 @@ const togglePositionPicker = () => {
                 roll: 0,
                 horizontalFOV: 60,
                 verticalFOV: 45,
-                maxDistance: 100
+                maxDistance: 100,
+                videoUrl: ''
               };
               
               editMode.value = false;
@@ -385,7 +396,8 @@ const togglePositionPicker = () => {
             roll: 0,
             horizontalFOV: 60,
             verticalFOV: 45,
-            maxDistance: 100
+            maxDistance: 100,
+            videoUrl: ''
           };
           
           editMode.value = false;

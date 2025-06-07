@@ -25,6 +25,7 @@ class CameraManager {
    * @param {number} options.verticalFOV 垂直视场角，单位：度
    * @param {number} options.maxDistance 最大可视距离，单位：米
    * @param {string} options.name 摄像头名称
+   * @param {string} options.videoUrl 摄像头视频URL
    * @returns {string} 摄像头ID
    */
   addCamera(options) {
@@ -39,7 +40,8 @@ class CameraManager {
       verticalFOV: options.verticalFOV || 45,
       maxDistance: options.maxDistance || 100,
       name: options.name || `摄像头 ${id}`,
-      active: false
+      active: false,
+      videoUrl: options.videoUrl || '',
     });
     
     // 在地图上添加摄像头实体

@@ -163,8 +163,12 @@ const onCameraAdded = (cameraId) => {
   }
 }
 
-const onCameraActivated = (cameraId) => {
+const onCameraActivated = async (cameraId) => {
   updateActiveCameraName();
+  const camera = bikeDetector.cameraManager.cameras.get(cameraId);
+  if (camera && camera.videoUrl) {
+    await bikeDetector.switchCamera(camera);
+  }
   showNotification('摄像头管理', `已激活摄像头: ${activeCameraName.value}`, 'info');
 }
 

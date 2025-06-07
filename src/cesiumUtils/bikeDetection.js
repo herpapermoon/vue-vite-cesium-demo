@@ -53,20 +53,25 @@ class BikeDetection {
   }
 
   // 初始化检测器
-  async initialize(videoElementId) {
+  async initialize(videoElementId, videoUrl) {
     try {
       // 加载COCO-SSD模型
-      console.log('正在加载目标检测模型...');
-      this.model = await cocossd.load({
-        base: 'lite_mobilenet_v2' // 使用轻量级模型以提高性能
-      });
-      console.log('目标检测模型加载完成');
-
+      if (!this.model) {
+        console.log('正在加载目标检测模型...');
+        this.model = await cocossd.load({
+          base: 'lite_mobilenet_v2'
+        });
+        console.log('目标检测模型加载完成');
+      }
       // 设置视频元素
       this.videoElement = document.getElementById(videoElementId);
       if (!this.videoElement) {
         console.error('找不到视频元素:', videoElementId);
         return false;
+      }
+      if (videoUrl) {
+        this.videoElement.src = videoUrl;
+        this.videoElement.load();
       }
       
       // 使用HTML中已定义的canvas
@@ -824,6 +829,21 @@ class BikeDetection {
     }
     
     this.eventListeners.clear();
+  }
+
+  /**
+   * 切换摄像头和视频流
+   * @param {Object} camera 摄像头对象，需包含videoUrl
+   */
+  async switchCamera(camera) {
+    if (!camera || !camera.videoUrl) {
+      console.error('切换摄像头失败，缺少videoUrl');
+      return false;
+    }
+    this.stopDetection();
+    await this.initialize('h5sVideo1', camera.videoUrl);
+    await this.startDetection();
+    return true;
   }
 }
 
