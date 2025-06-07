@@ -390,11 +390,7 @@ const onVideoError = (error) => {
 // 关闭视频容器
 const closeVideoContainer = () => {
   console.log('关闭视频容器');
-  // 暂停检测，并同步状态
-  if (detectionActive.value && bikeDetector) {
-    bikeDetector.pauseDetection();
-    detectionActive.value = false;
-  }
+  // 不再暂停检测，识别继续后台运行
   // 清理视频元素
   const videoElement = document.getElementById('h5sVideo1');
   if (videoElement) {
@@ -409,7 +405,7 @@ const closeVideoContainer = () => {
   if (toolbarRef.value?.isToolActive('bikeDetection')) {
     toolbarRef.value.resetTool('bikeDetection');
   }
-  showNotification('单车管理', '已关闭检测窗口（数据已保留）', 'info');
+  showNotification('单车管理', '已关闭检测窗口（识别仍在后台运行）', 'info');
 };
 
 // 通用功能调用函数，根据按钮激活状态决定执行成功或失败的回调
