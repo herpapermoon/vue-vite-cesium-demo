@@ -17,7 +17,7 @@ class BikePositionManager {
     // this.bikeEntities = new Map();
     
     // 默认高度设置
-    this.defaultHeight = 1.5; // 默认单车高度，单位：米
+    this.defaultHeight = 17; // 默认单车高度，单位：米，与randomPoints.js中的BIKE_HEIGHT保持一致
     
     // 使用Cesium内置图标
     this.bikeIconPath = Cesium.buildModuleUrl('Assets/Textures/maki/bicycle.png');

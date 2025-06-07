@@ -2,7 +2,7 @@
  * 校园单车数据存储服务
  * 提供单车数据的增删改查及其他管理功能
  */
-import { calculateDistance } from './randomPoints';
+import { calculateDistance, bikeImages, statusIconMap as originalStatusIconMap, getIconByStatus as originalGetIconByStatus } from './randomPoints';
 import Cesium from '@/cesiumUtils/cesium';
 
 class BikeStore {
@@ -33,16 +33,8 @@ class BikeStore {
     this.billboardCollections = new Map(); // 存储图标集合
     this.viewer = null; // Cesium实例引用
     
-    // 默认图标路径
-    this.defaultBikeIconPath = Cesium.buildModuleUrl('Assets/Textures/maki/bicycle.png');
-    this.defaultMotoIconPath = Cesium.buildModuleUrl('Assets/Textures/maki/motorcycle.png');
-    
-    // 单车状态对应的图标
-    this.statusIconMap = {
-      'parked': this.defaultBikeIconPath,
-      'riding': this.defaultMotoIconPath,
-      'detected': this.defaultBikeIconPath
-    };
+    // 使用从randomPoints导入的图标映射
+    this.statusIconMap = { ...originalStatusIconMap };
   }
 
   /**
@@ -119,7 +111,8 @@ class BikeStore {
    * @returns {String} 图标URL
    */
   getIconByStatus(status) {
-    return this.statusIconMap[status] || this.defaultBikeIconPath;
+    // 使用从randomPoints导入的getIconByStatus函数
+    return originalGetIconByStatus(status);
   }
   
   /**
@@ -172,7 +165,7 @@ class BikeStore {
       throw new Error('未设置Cesium.Viewer实例，无法创建实体');
     }
     
-    const { id, longitude, latitude, height = 1.5, status = 'parked', type = 'bicycle' } = bikeData;
+    const { id, longitude, latitude, height = 17, status = 'parked', type = 'bicycle' } = bikeData;
     
     // 检查是否已存在该实体
     if (this.entityMap.has(id)) {
@@ -182,10 +175,13 @@ class BikeStore {
     // 获取图标集合
     const collection = this.getOrCreateBillboardCollection(collectionName);
     
-    // 确定图标
-    const iconImage = type === 'motorcycle' ? 
-                      this.statusIconMap['riding'] : 
-                      this.getIconByStatus(status);
+    // 确定图标 - 使用从randomPoints.js导入的getIconByStatus函数
+    let iconImage;
+    if (type === 'motorcycle') {
+      iconImage = originalGetIconByStatus('motorcycle');
+    } else {
+      iconImage = originalGetIconByStatus(status);
+    }
     
     // 创建广告牌
     const billboard = collection.add({
@@ -249,7 +245,7 @@ class BikeStore {
     }
     
     const { billboard, label } = entityRef;
-    const { longitude, latitude, height = 1.5, status, type } = updateData;
+    const { longitude, latitude, height = 17, status, type } = updateData;
     
     // 更新广告牌位置
     if (longitude && latitude) {
@@ -263,9 +259,12 @@ class BikeStore {
     
     // 更新图标
     if (status || type) {
-      const iconImage = type === 'motorcycle' ? 
-                      this.statusIconMap['riding'] : 
-                      this.getIconByStatus(status || 'parked');
+      let iconImage;
+      if (type === 'motorcycle') {
+        iconImage = originalGetIconByStatus('motorcycle');
+      } else {
+        iconImage = originalGetIconByStatus(status || 'parked');
+      }
       billboard.image = iconImage;
     }
     

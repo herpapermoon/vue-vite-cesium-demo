@@ -6,7 +6,13 @@ import ship3 from '@/assets/ships/ship3.png'
 import ship4 from '@/assets/ships/ship4.png'
 
 // 单车图标资源数组
-const images = [ship0, ship1, ship2, ship3, ship4]
+export const bikeImages = {
+  ship0, 
+  ship1, 
+  ship2, 
+  ship3, 
+  ship4
+}
 
 // 单车高度（米）
 const BIKE_HEIGHT = 17;
@@ -32,13 +38,16 @@ export const BikeStatus = {
 }
 
 // 状态对应的图标映射
-const statusIconMap = {
+export const statusIconMap = {
   [BikeStatus.PARKED]: ship0,    // 停车状态 - ship0
-  [BikeStatus.RIDING]: ship3      // 骑行状态 - ship3
+  [BikeStatus.RIDING]: ship3,     // 骑行状态 - ship3
+  'detected': ship0,              // 检测状态 - ship0
+  'bicycle': ship0,               // 自行车 - ship0
+  'motorcycle': ship3             // 摩托车 - ship3
 }
 
 // 根据状态获取对应的图标
-const getIconByStatus = (status) => {
+export const getIconByStatus = (status) => {
   return statusIconMap[status] || ship0; // 默认使用ship0
 }
 
