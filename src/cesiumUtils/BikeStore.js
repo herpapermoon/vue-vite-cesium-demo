@@ -188,9 +188,11 @@ class BikeStore {
       id: id,
       position: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
       image: iconImage,
-      scale: 0.1,
+      scale: 0.1, // 增大比例，使单车更容易看见
       horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-      verticalOrigin: Cesium.VerticalOrigin.CENTER
+      verticalOrigin: Cesium.VerticalOrigin.CENTER,
+      eyeOffset: new Cesium.Cartesian3(0, 0, 0), // 确保没有视点偏移
+      disableDepthTestDistance: Number.POSITIVE_INFINITY // 禁用深度测试，确保始终可见
     });
     
     // 创建标签
@@ -245,16 +247,21 @@ class BikeStore {
     }
     
     const { billboard, label } = entityRef;
-    const { longitude, latitude, height = 17, status, type } = updateData;
+    const { longitude, latitude, height = 20, status, type } = updateData;
     
     // 更新广告牌位置
     if (longitude && latitude) {
+      // 确保设置新位置
       billboard.position = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
       
       // 如果有标签，也更新标签位置
       if (label) {
         label.position = Cesium.Cartesian3.fromDegrees(longitude, latitude, height + 0.3);
       }
+      
+      // 确保实体可见
+      billboard.show = true;
+      if (label) label.show = true;
     }
     
     // 更新图标

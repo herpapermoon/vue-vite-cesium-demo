@@ -50,7 +50,8 @@ import { ref, computed } from 'vue';
 import BikeStats from './sidebar/BikeStats.vue';
 import BikeManagement from './sidebar/BikeManagement.vue';
 import TripPlanner from './sidebar/TripPlanner.vue';
-import MetroStationQuery from './sidebar/MetroStationQuery.vue'; // 导入新组件
+import MetroStationQuery from './sidebar/MetroStationQuery.vue';
+import ParkingManagement from './sidebar/ParkingManagement.vue'; // 新增
 
 // 状态管理
 const expanded = ref(true);
@@ -67,8 +68,9 @@ const tabs = [
   //{ id: 'stats', label: '统计视图', icon: '📊', component: Statistics },
   { id: 'bikes', label: '单车数据', icon: '🚲', component: BikeStats },
   { id: 'bikeManage', label: '单车管理', icon: '🔧', component: BikeManagement },
+  { id: 'parking', label: '车位车库', icon: '🅿️', component: ParkingManagement }, // 新增
   { id: 'tripPlanner', label: '出行规划', icon: '🗺️', component: TripPlanner },
-   { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery }
+  { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery }
   //{ id: 'resources', label: '资源管理', icon: '📦', component: Resources }
 ];
 
