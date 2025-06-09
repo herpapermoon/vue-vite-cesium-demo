@@ -14,6 +14,12 @@
         @click="activeTab = 'garage'">
         🏢 车库管理
       </div>
+      <div 
+        class="tab-button" 
+        :class="{ active: activeTab === 'analysis' }"
+        @click="activeTab = 'analysis'">
+        🧠 智能分析
+      </div>
     </div>
 
     <!-- 车位内容 -->
@@ -159,6 +165,116 @@
         </div>
       </div>
     </div>
+
+    <!-- 分析内容 -->
+    <div v-if="activeTab === 'analysis'" class="analysis-content">
+      <div class="status-header">
+        <h4>车位智能分析</h4>
+        <div class="status-summary">
+          <div class="status-item available">
+            <span class="label">总车位:</span>
+            <span class="value">{{ totalSpots }}</span>
+          </div>
+          <div class="status-item occupied">
+            <span class="label">已占用:</span>
+            <span class="value">{{ occupiedSpots }}</span>
+          </div>
+          <div class="status-item free">
+            <span class="label">空闲:</span>
+            <span class="value">{{ availableSpots }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-controls">
+        <button 
+          class="control-btn" 
+          @click="runAnalysis"
+          :disabled="isAnalyzing">
+          {{ isAnalyzing ? '分析中...' : '🔍 开始智能分析' }}
+        </button>
+        <div class="query-input">
+          <input 
+            type="text" 
+            v-model="userQuery" 
+            placeholder="输入分析需求，例如：分析哪些区域需要调配车位"
+            @keyup.enter="runAnalysis"
+            :disabled="isAnalyzing"
+          />
+        </div>
+      </div>
+
+      <div class="analysis-output" ref="outputContainer">
+        <div v-if="analysisResults.length === 0 && !isAnalyzing" class="empty-state">
+          点击"开始智能分析"按钮，AI将分析当前车位占用情况并提供调配建议
+        </div>
+        <div v-else-if="isAnalyzing" class="loading-state">
+          <div class="loading-spinner"></div>
+          <div>正在分析中，请稍候...</div>
+        </div>
+        <div v-else class="result-container">
+          <div v-for="(result, index) in analysisResults" :key="index" class="result-item">
+            <div class="result-header">
+              <span class="result-title">分析结果 #{{ index + 1 }}</span>
+              <span class="result-time">{{ result.timestamp }}</span>
+            </div>
+            
+            <div v-if="result.summary" class="result-summary">
+              <h5>摘要</h5>
+              <div class="summary-item" v-if="result.summary.highOccupancyAreas">
+                <span class="summary-label">高占用区域:</span>
+                <span class="summary-value">{{ result.summary.highOccupancyAreas.join(', ') }}</span>
+              </div>
+              <div class="summary-item" v-if="result.summary.lowOccupancyAreas">
+                <span class="summary-label">低占用区域:</span>
+                <span class="summary-value">{{ result.summary.lowOccupancyAreas.join(', ') }}</span>
+              </div>
+              <div class="summary-item" v-if="result.summary.overallStatus">
+                <span class="summary-label">总体状态:</span>
+                <span class="summary-value">{{ result.summary.overallStatus }}</span>
+              </div>
+            </div>
+            
+            <div v-if="result.recommendations && result.recommendations.length" class="result-recommendations">
+              <h5>调配建议</h5>
+              <div v-for="(rec, recIndex) in result.recommendations" :key="recIndex" class="recommendation-item" :class="rec.type">
+                <template v-if="rec.type === 'immediate'">
+                  <div class="rec-badge immediate">即时</div>
+                  <div class="rec-content">
+                    从 <span class="rec-highlight">{{ rec.from }}</span> 
+                    向 <span class="rec-highlight">{{ rec.to }}</span> 
+                    调配 <span class="rec-highlight">{{ rec.amount }}</span> 辆单车
+                    <span class="rec-priority" :class="rec.priority">{{ rec.priority }}优先级</span>
+                  </div>
+                </template>
+                <template v-else-if="rec.type === 'longTerm'">
+                  <div class="rec-badge longterm">长期</div>
+                  <div class="rec-content">
+                    {{ rec.action }} <span class="rec-highlight">{{ rec.location }}</span>
+                    <div class="rec-description">{{ rec.description }}</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            
+            <div class="result-content" v-html="formatAnalysisResult(result.detailedAnalysis)"></div>
+            
+            <div v-if="result.recommendations && result.recommendations.length" class="result-actions">
+              <button 
+                class="action-btn" 
+                @click="showRecommendationsOnMap(result.recommendations)">
+                在地图上显示建议
+              </button>
+              <button 
+                class="action-btn" 
+                @click="generateHeatmap()">
+                生成占用热力图
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -167,6 +283,7 @@ import { ref, onMounted, computed, defineExpose, nextTick } from 'vue';
 import bikeStore from '@/cesiumUtils/BikeStore';
 import { calculateDistance } from '@/cesiumUtils/randomPoints';
 import Cesium from '@/cesiumUtils/cesium';
+import ParkingAnalysisService from '@/cesiumUtils/ParkingAnalysisService';
 
 // 响应式状态
 const activeTab = ref('parking');
@@ -174,6 +291,12 @@ const parkingSpots = ref([]);
 const garages = ref([]);
 const isLoading = ref(false);
 const showVisualization = ref(true);
+
+// 智能分析相关状态
+const isAnalyzing = ref(false);
+const userQuery = ref('');
+const analysisResults = ref([]);
+const outputContainer = ref(null);
 
 // 常量定义
 const PARKING_HEIGHT = 20;
@@ -343,6 +466,563 @@ const clearEntities = () => {
   });
 };
 
+// 智能分析相关方法
+/**
+ * 运行智能分析
+ */
+const runAnalysis = async () => {
+  if (isAnalyzing.value) return;
+  
+  isAnalyzing.value = true;
+  
+  try {
+    // 准备分析数据
+    const analysisData = {
+      parkingSpots: parkingSpots.value,
+      garages: garages.value,
+      totalSpots: totalSpots.value,
+      occupiedSpots: occupiedSpots.value,
+      availableSpots: availableSpots.value
+    };
+    
+    // 调用分析服务
+    const result = await ParkingAnalysisService.analyzeParkingData(
+      analysisData, 
+      userQuery.value
+    );
+    
+    // 添加时间戳
+    const analysisResult = {
+      ...result,
+      timestamp: new Date().toLocaleString()
+    };
+    
+    // 将结果添加到分析结果列表
+    analysisResults.value.unshift(analysisResult);
+    
+    // 清空查询输入
+    userQuery.value = '';
+    
+    // 滚动到顶部
+    await nextTick();
+    if (outputContainer.value) {
+      outputContainer.value.scrollTop = 0;
+    }
+  } catch (error) {
+    console.error('分析出错:', error);
+    
+    // 添加错误信息到结果列表
+    analysisResults.value.unshift({
+      success: false,
+      error: error.message || '未知错误',
+      timestamp: new Date().toLocaleString(),
+      detailedAnalysis: `分析过程中发生错误: ${error.message || '未知错误'}`
+    });
+  } finally {
+    isAnalyzing.value = false;
+  }
+};
+
+/**
+ * 格式化分析结果，将Markdown转换为HTML
+ */
+const formatAnalysisResult = (text) => {
+  if (!text) return '';
+  
+  // 简单的Markdown格式化
+  return text
+    .replace(/##\s+(.*?)(?=\n|$)/g, '<h4>$1</h4>')
+    .replace(/###\s+(.*?)(?=\n|$)/g, '<h5>$1</h5>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+};
+
+/**
+ * 在地图上显示推荐的调配建议
+ */
+const showRecommendationsOnMap = (recommendations) => {
+  if (!recommendations || !recommendations.length || !bikeStore.viewer) return;
+  
+  // 清除之前的分析实体
+  clearAnalysisEntities();
+  
+  // 处理每一个推荐
+  recommendations.forEach(rec => {
+    if (rec.type === 'immediate' && rec.from && rec.to) {
+      // 查找源车位和目标车位
+      const fromSpot = findParkingSpotById(rec.from);
+      const toSpot = findParkingSpotById(rec.to);
+      
+      if (fromSpot && toSpot) {
+        // 添加箭头实体
+        addArrowEntity(fromSpot, toSpot, rec);
+        
+        // 高亮显示源车位和目标车位
+        highlightParkingSpot(fromSpot, Cesium.Color.YELLOW.withAlpha(0.6));
+        highlightParkingSpot(toSpot, Cesium.Color.GREEN.withAlpha(0.6));
+      }
+    } else if (rec.type === 'longTerm' && rec.location) {
+      // 查找位置
+      const spot = findParkingSpotById(rec.location);
+      
+      if (spot) {
+        // 高亮显示位置
+        highlightParkingSpot(spot, Cesium.Color.BLUE.withAlpha(0.6));
+        
+        // 添加标签
+        addLabelEntity(spot, rec.action || '长期优化');
+      }
+    }
+  });
+  
+  // 飞行到第一个推荐的位置
+  const firstRec = recommendations[0];
+  if (firstRec) {
+    const spot = findParkingSpotById(firstRec.from || firstRec.location);
+    if (spot) {
+      flyToSpot(spot);
+    }
+  }
+};
+
+/**
+ * 根据ID查找车位
+ */
+const findParkingSpotById = (idStr) => {
+  // 提取ID数字
+  const idMatch = idStr.match(/\d+/);
+  if (!idMatch) return null;
+  
+  const id = idMatch[0];
+  return parkingSpots.value.find(spot => String(spot.id) === id);
+};
+
+/**
+ * 添加箭头实体
+ */
+const addArrowEntity = (fromSpot, toSpot, recommendation) => {
+  if (!fromSpot.center || !toSpot.center || !bikeStore.viewer) return;
+  
+  const fromPos = Cesium.Cartesian3.fromDegrees(
+    fromSpot.center[0], 
+    fromSpot.center[1], 
+    PARKING_HEIGHT + 30
+  );
+  
+  const toPos = Cesium.Cartesian3.fromDegrees(
+    toSpot.center[0], 
+    toSpot.center[1], 
+    PARKING_HEIGHT + 30
+  );
+  
+  // 添加连接线
+  bikeStore.viewer.entities.add({
+    name: 'analysis-arrow',
+    polyline: {
+      positions: [fromPos, toPos],
+      width: 3,
+      material: new Cesium.PolylineArrowMaterialProperty(
+        Cesium.Color.fromCssColorString(
+          recommendation.priority === '高' ? '#FF4500' : 
+          recommendation.priority === '中' ? '#FFA500' : '#4169E1'
+        )
+      ),
+      clampToGround: false
+    },
+    label: {
+      text: `调配 ${recommendation.amount || ''} 辆`,
+      font: '14px sans-serif',
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      outlineWidth: 2,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+      pixelOffset: new Cesium.Cartesian2(0, -10),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      position: Cesium.Cartesian3.midpoint(fromPos, toPos, new Cesium.Cartesian3())
+    }
+  });
+};
+
+/**
+ * 高亮显示车位
+ */
+const highlightParkingSpot = (spot, color) => {
+  if (!spot.coordinates || !bikeStore.viewer) return;
+  
+  try {
+    const coordinateArray = spot.coordinates[0][0].reduce((acc, coord) => {
+      acc.push(coord[0], coord[1]);
+      return acc;
+    }, []);
+    
+    bikeStore.viewer.entities.add({
+      name: `analysis-highlight-${spot.id}`,
+      polygon: {
+        hierarchy: Cesium.Cartesian3.fromDegreesArray(coordinateArray),
+        material: color,
+        outline: true,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2,
+        height: PARKING_HEIGHT,
+        extrudedHeight: PARKING_HEIGHT + 5
+      }
+    });
+  } catch (error) {
+    console.error('高亮显示车位失败:', error, spot);
+  }
+};
+
+/**
+ * 添加标签实体
+ */
+const addLabelEntity = (spot, text) => {
+  if (!spot.center || !bikeStore.viewer) return;
+  
+  bikeStore.viewer.entities.add({
+    name: `analysis-label-${spot.id}`,
+    position: Cesium.Cartesian3.fromDegrees(
+      spot.center[0], 
+      spot.center[1], 
+      PARKING_HEIGHT + 40
+    ),
+    label: {
+      text: text,
+      font: '16px sans-serif',
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      outlineWidth: 2,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+      pixelOffset: new Cesium.Cartesian2(0, 0),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      showBackground: true,
+      backgroundColor: Cesium.Color.BLUE.withAlpha(0.7)
+    },
+    billboard: {
+      image: '/src/assets/images/pin.png',
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      scale: 0.1,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    }
+  });
+};
+
+/**
+ * 清除分析实体
+ */
+const clearAnalysisEntities = () => {
+  if (!bikeStore.viewer) return;
+  
+  const entities = bikeStore.viewer.entities.values.slice();
+  entities.forEach(entity => {
+    if (entity.name && (
+      entity.name.includes('analysis-arrow') || 
+      entity.name.includes('analysis-highlight') ||
+      entity.name.includes('analysis-label')
+    )) {
+      bikeStore.viewer.entities.remove(entity);
+    }
+  });
+};
+
+// 清理分析实体的方法
+const cleanup = () => {
+  clearAnalysisEntities();
+};
+
+// 清理定时器
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+  if (updateTimer) {
+    clearInterval(updateTimer);
+  }
+  clearEntities();
+  cleanup();
+});
+
+// 定时更新
+let updateTimer = null;
+
+// 组件加载时初始化
+onMounted(async () => {
+  await nextTick(); // 等待DOM更新
+  
+  // 等待bikeStore.viewer可用
+  const waitForViewer = () => {
+    return new Promise((resolve) => {
+      const checkViewer = () => {
+        if (window.viewer3D) {
+          bikeStore.setViewer(window.viewer3D);
+          resolve();
+        } else {
+          setTimeout(checkViewer, 100);
+        }
+      };
+      checkViewer();
+    });
+  };
+  
+  await waitForViewer();
+  
+  // 加载数据
+  await Promise.all([loadParkingData(), loadGarageData()]);
+  
+  // 初始化状态
+  updateParkingStatus();
+  updateGarageStatus();
+  visualizeAll();
+  
+  // 设置定时更新
+  updateTimer = setInterval(() => {
+    updateParkingStatus();
+    updateGarageStatus();
+    if (showVisualization.value) {
+      visualizeAll();
+    }
+  }, UPDATE_INTERVAL);
+});
+
+// 查找可用停车位
+const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters = 100) => {
+  if (!parkingSpots.value || parkingSpots.value.length === 0) {
+    return null;
+  }
+  
+  const nearbySpots = parkingSpots.value.filter(spot => {
+    if (!spot.center) return false;
+    
+    const distance = calculateDistance([centerLon, centerLat], spot.center);
+    return distance <= radiusInMeters && !spot.isFull;
+  });
+  
+  if (nearbySpots.length === 0) {
+    return null;
+  }
+  
+  nearbySpots.sort((a, b) => {
+    const distA = calculateDistance([centerLon, centerLat], a.center);
+    const distB = calculateDistance([centerLon, centerLat], b.center);
+    return distA - distB;
+  });
+  
+  return nearbySpots[0];
+};
+
+// 查找可用车库
+const findAvailableGarageInRadius = (centerLon, centerLat, radiusInMeters = 200) => {
+  if (!garages.value || garages.value.length === 0) {
+    return null;
+  }
+  
+  const nearbyGarages = garages.value.filter(garage => {
+    if (!garage.position) return false;
+    
+    const distance = calculateDistance([centerLon, centerLat], garage.position);
+    return distance <= radiusInMeters && !garage.isFull;
+  });
+  
+  if (nearbyGarages.length === 0) {
+    return null;
+  }
+  
+  nearbyGarages.sort((a, b) => {
+    const distA = calculateDistance([centerLon, centerLat], a.position);
+    const distB = calculateDistance([centerLon, centerLat], b.position);
+    return distA - distB;
+  });
+  
+  return nearbyGarages[0];
+};
+
+// 计算统计信息
+const totalSpots = computed(() => parkingSpots.value.length);
+const occupiedSpots = computed(() => parkingSpots.value.filter(spot => spot.isOccupied).length);
+const availableSpots = computed(() => totalSpots.value - occupiedSpots.value);
+
+const totalGarages = computed(() => garages.value.length);
+const occupiedGarages = computed(() => garages.value.filter(garage => garage.isOccupied).length);
+const availableGarages = computed(() => totalGarages.value - occupiedGarages.value);
+
+// 根据占用率获取占用等级
+const getOccupancyLevel = (occupancyRate) => {
+  const rate = parseFloat(occupancyRate) || 0;
+  if (rate === 0) return '0';
+  if (rate <= 25) return '25';
+  if (rate <= 50) return '50';
+  if (rate <= 75) return '75';
+  return '100';
+};
+
+// 加载车位数据
+const loadParkingData = async () => {
+  try {
+    isLoading.value = true;
+    const response = await fetch('/src/assets/ships/车位new.geojson');
+    const data = await response.json();
+    
+    parkingSpots.value = data.features.map((feature, index) => {
+      const coordinates = feature.geometry.coordinates;
+      const center = calculatePolygonCenter(coordinates[0][0]);
+      const spotId = feature.properties?.id || feature.properties?.ID || feature.properties?.name || (index + 1);
+      
+      const area = calculatePolygonArea(coordinates[0][0]);
+      const maxCapacity = Math.max(1, Math.floor(area / 1)); // 改为每1平方米1辆单车
+      
+      return {
+        id: spotId,
+        coordinates: coordinates,
+        center: center,
+        area: area,
+        maxCapacity: maxCapacity,
+        isOccupied: false,
+        bikeCount: 0,
+        isFull: false,
+        occupancyRate: '0.0'
+      };
+    });
+
+    console.log('加载的车位数据:', parkingSpots.value);
+    
+  } catch (error) {
+    console.error('加载车位数据失败:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// 加载车库数据
+const loadGarageData = async () => {
+  try {
+    isLoading.value = true;
+    const response = await fetch('/src/assets/ships/车库点.geojson');
+    const data = await response.json();
+    
+    garages.value = data.features.map((feature, index) => {
+      const coordinates = feature.geometry.coordinates;
+      const garageName = feature.properties?.Name || 
+                        feature.properties?.name || 
+                        `车库 #${feature.properties?.Number || (index + 1)}`;
+      const garageId = feature.properties?.Number || 
+                      feature.properties?.id || 
+                      feature.properties?.ID || 
+                      (index + 1);
+      
+      return {
+        id: garageId,
+        name: garageName,
+        position: coordinates,
+        maxCapacity: GARAGE_CAPACITY,
+        isOccupied: false,
+        bikeCount: 0,
+        isFull: false,
+        occupancyRate: '0.0'
+      };
+    });
+
+    console.log('加载的车库数据:', garages.value);
+    
+  } catch (error) {
+    console.error('加载车库数据失败:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// 刷新数据
+const refreshParkingData = async () => {
+  await loadParkingData();
+  updateParkingStatus();
+  if (showVisualization.value) {
+    visualizeAll();
+  }
+};
+
+const refreshGarageData = async () => {
+  await loadGarageData();
+  updateGarageStatus();
+  if (showVisualization.value) {
+    visualizeAll();
+  }
+};
+
+// 更新车位占用状态
+const updateParkingStatus = () => {
+  const bikes = bikeStore.getAllBikes();
+  if (!bikes || !parkingSpots.value) return;
+  
+  parkingSpots.value = parkingSpots.value.map(spot => {
+    const bikesInSpot = bikes.filter(bike => {
+      if (bike.status !== 'parked') return false;
+      return isPointInPolygon(
+        [bike.longitude, bike.latitude],
+        spot.coordinates[0][0]
+      );
+    });
+
+    const bikeCount = bikesInSpot.length;
+    const isOccupied = bikeCount > 0;
+    const isFull = bikeCount >= spot.maxCapacity;
+    const occupancyRate = (bikeCount / spot.maxCapacity * 100).toFixed(1);
+
+    return {
+      ...spot,
+      bikeCount,
+      isOccupied,
+      isFull,
+      occupancyRate
+    };
+  });
+};
+
+// 更新车库占用状态
+const updateGarageStatus = () => {
+  const bikes = bikeStore.getAllBikes();
+  if (!bikes || !garages.value) return;
+  
+  garages.value = garages.value.map(garage => {
+    const bikesInGarage = bikes.filter(bike => {
+      if (bike.status !== 'parked') return false;
+      return isPointInGarageRadius(
+        [bike.longitude, bike.latitude],
+        garage.position,
+        50 // 50米范围内
+      );
+    });
+
+    const bikeCount = bikesInGarage.length;
+    const isOccupied = bikeCount > 0;
+    const isFull = bikeCount >= garage.maxCapacity;
+    const occupancyRate = (bikeCount / garage.maxCapacity * 100).toFixed(1);
+
+    return {
+      ...garage,
+      bikeCount,
+      isOccupied,
+      isFull,
+      occupancyRate
+    };
+  });
+};
+
+// 可视化所有设施
+const visualizeAll = () => {
+  if (showVisualization.value) {
+    clearEntities();
+    visualizeParkingSpots();
+    visualizeGarages();
+  } else {
+    clearEntities();
+  }
+};
+
+// 切换可视化显示
+const toggleVisualization = () => {
+  showVisualization.value = !showVisualization.value;
+  visualizeAll();
+};
+
 // 在 Cesium 地图上可视化车位
 const visualizeParkingSpots = () => {
   if (!bikeStore.viewer || !parkingSpots.value.length || !showVisualization.value) return;
@@ -445,301 +1125,35 @@ const visualizeGarages = () => {
   });
 };
 
-// 可视化所有设施
-const visualizeAll = () => {
-  if (showVisualization.value) {
-    clearEntities();
-    visualizeParkingSpots();
-    visualizeGarages();
-  } else {
-    clearEntities();
-  }
-};
-
-// 切换可视化显示
-const toggleVisualization = () => {
-  showVisualization.value = !showVisualization.value;
-  visualizeAll();
-};
-
-// 更新车位占用状态
-const updateParkingStatus = () => {
-  const bikes = bikeStore.getAllBikes();
-  if (!bikes || !parkingSpots.value) return;
-  
-  parkingSpots.value = parkingSpots.value.map(spot => {
-    const bikesInSpot = bikes.filter(bike => {
-      if (bike.status !== 'parked') return false;
-      return isPointInPolygon(
-        [bike.longitude, bike.latitude],
-        spot.coordinates[0][0]
-      );
-    });
-
-    const bikeCount = bikesInSpot.length;
-    const isOccupied = bikeCount > 0;
-    const isFull = bikeCount >= spot.maxCapacity;
-    const occupancyRate = (bikeCount / spot.maxCapacity * 100).toFixed(1);
-
-    return {
-      ...spot,
-      bikeCount,
-      isOccupied,
-      isFull,
-      occupancyRate
-    };
-  });
-};
-
-// 更新车库占用状态
-const updateGarageStatus = () => {
-  const bikes = bikeStore.getAllBikes();
-  if (!bikes || !garages.value) return;
-  
-  garages.value = garages.value.map(garage => {
-    const bikesInGarage = bikes.filter(bike => {
-      if (bike.status !== 'parked') return false;
-      return isPointInGarageRadius(
-        [bike.longitude, bike.latitude],
-        garage.position,
-        50 // 50米范围内
-      );
-    });
-
-    const bikeCount = bikesInGarage.length;
-    const isOccupied = bikeCount > 0;
-    const isFull = bikeCount >= garage.maxCapacity;
-    const occupancyRate = (bikeCount / garage.maxCapacity * 100).toFixed(1);
-
-    return {
-      ...garage,
-      bikeCount,
-      isOccupied,
-      isFull,
-      occupancyRate
-    };
-  });
-};
-
-// 加载车位数据
-const loadParkingData = async () => {
-  try {
-    isLoading.value = true;
-    const response = await fetch('/src/assets/ships/车位new.geojson');
-    const data = await response.json();
-    
-    parkingSpots.value = data.features.map((feature, index) => {
-      const coordinates = feature.geometry.coordinates;
-      const center = calculatePolygonCenter(coordinates[0][0]);
-      const spotId = feature.properties?.id || feature.properties?.ID || feature.properties?.name || (index + 1);
-      
-      const area = calculatePolygonArea(coordinates[0][0]);
-      const maxCapacity = Math.max(1, Math.floor(area / 1)); // 改为每1平方米1辆单车
-      
-      return {
-        id: spotId,
-        coordinates: coordinates,
-        center: center,
-        area: area,
-        maxCapacity: maxCapacity,
-        isOccupied: false,
-        bikeCount: 0,
-        isFull: false,
-        occupancyRate: '0.0'
-      };
-    });
-
-    console.log('加载的车位数据:', parkingSpots.value);
-    
-  } catch (error) {
-    console.error('加载车位数据失败:', error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// 加载车库数据
-const loadGarageData = async () => {
-  try {
-    isLoading.value = true;
-    const response = await fetch('/src/assets/ships/车库点.geojson');
-    const data = await response.json();
-    
-    garages.value = data.features.map((feature, index) => {
-      const coordinates = feature.geometry.coordinates;
-      const garageName = feature.properties?.Name || 
-                        feature.properties?.name || 
-                        `车库 #${feature.properties?.Number || (index + 1)}`;
-      const garageId = feature.properties?.Number || 
-                      feature.properties?.id || 
-                      feature.properties?.ID || 
-                      (index + 1);
-      
-      return {
-        id: garageId,
-        name: garageName,
-        position: coordinates,
-        maxCapacity: GARAGE_CAPACITY,
-        isOccupied: false,
-        bikeCount: 0,
-        isFull: false,
-        occupancyRate: '0.0'
-      };
-    });
-
-    console.log('加载的车库数据:', garages.value);
-    
-  } catch (error) {
-    console.error('加载车库数据失败:', error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
 // 刷新数据
-const refreshParkingData = async () => {
-  await loadParkingData();
-  updateParkingStatus();
-  if (showVisualization.value) {
-    visualizeAll();
-  }
-};
-
-const refreshGarageData = async () => {
-  await loadGarageData();
-  updateGarageStatus();
-  if (showVisualization.value) {
-    visualizeAll();
-  }
-};
-
-// 查找可用停车位
-const findAvailableParkingSpotInRadius = (centerLon, centerLat, radiusInMeters = 100) => {
-  if (!parkingSpots.value || parkingSpots.value.length === 0) {
-    return null;
-  }
+const refreshData = async () => {
+  isLoading.value = true;
   
-  const nearbySpots = parkingSpots.value.filter(spot => {
-    if (!spot.center) return false;
+  try {
+    // 并行加载车位和车库数据
+    await Promise.all([loadParkingData(), loadGarageData()]);
     
-    const distance = calculateDistance([centerLon, centerLat], spot.center);
-    return distance <= radiusInMeters && !spot.isFull;
-  });
-  
-  if (nearbySpots.length === 0) {
-    return null;
-  }
-  
-  nearbySpots.sort((a, b) => {
-    const distA = calculateDistance([centerLon, centerLat], a.center);
-    const distB = calculateDistance([centerLon, centerLat], b.center);
-    return distA - distB;
-  });
-  
-  return nearbySpots[0];
-};
-
-// 查找可用车库
-const findAvailableGarageInRadius = (centerLon, centerLat, radiusInMeters = 200) => {
-  if (!garages.value || garages.value.length === 0) {
-    return null;
-  }
-  
-  const nearbyGarages = garages.value.filter(garage => {
-    if (!garage.position) return false;
-    
-    const distance = calculateDistance([centerLon, centerLat], garage.position);
-    return distance <= radiusInMeters && !garage.isFull;
-  });
-  
-  if (nearbyGarages.length === 0) {
-    return null;
-  }
-  
-  nearbyGarages.sort((a, b) => {
-    const distA = calculateDistance([centerLon, centerLat], a.position);
-    const distB = calculateDistance([centerLon, centerLat], b.position);
-    return distA - distB;
-  });
-  
-  return nearbyGarages[0];
-};
-
-// 计算统计信息
-const totalSpots = computed(() => parkingSpots.value.length);
-const occupiedSpots = computed(() => parkingSpots.value.filter(spot => spot.isOccupied).length);
-const availableSpots = computed(() => totalSpots.value - occupiedSpots.value);
-
-const totalGarages = computed(() => garages.value.length);
-const occupiedGarages = computed(() => garages.value.filter(garage => garage.isOccupied).length);
-const availableGarages = computed(() => totalGarages.value - occupiedGarages.value);
-
-// 根据占用率获取占用等级
-const getOccupancyLevel = (occupancyRate) => {
-  const rate = parseFloat(occupancyRate) || 0;
-  if (rate === 0) return '0';
-  if (rate <= 25) return '25';
-  if (rate <= 50) return '50';
-  if (rate <= 75) return '75';
-  return '100';
-};
-
-// 定时更新
-let updateTimer = null;
-
-// 组件加载时初始化
-onMounted(async () => {
-  await nextTick(); // 等待DOM更新
-  
-  // 等待bikeStore.viewer可用
-  const waitForViewer = () => {
-    return new Promise((resolve) => {
-      const checkViewer = () => {
-        if (window.viewer3D) {
-          bikeStore.setViewer(window.viewer3D);
-          resolve();
-        } else {
-          setTimeout(checkViewer, 100);
-        }
-      };
-      checkViewer();
-    });
-  };
-  
-  await waitForViewer();
-  
-  // 加载数据
-  await Promise.all([loadParkingData(), loadGarageData()]);
-  
-  // 初始化状态
-  updateParkingStatus();
-  updateGarageStatus();
-  visualizeAll();
-  
-  // 设置定时更新
-  updateTimer = setInterval(() => {
+    // 更新状态
     updateParkingStatus();
     updateGarageStatus();
+    
+    // 可视化
     if (showVisualization.value) {
       visualizeAll();
     }
-  }, UPDATE_INTERVAL);
-});
-
-// 清理定时器
-import { onUnmounted } from 'vue';
-onUnmounted(() => {
-  if (updateTimer) {
-    clearInterval(updateTimer);
+  } catch (error) {
+    console.error('刷新数据失败:', error);
+  } finally {
+    isLoading.value = false;
   }
-  clearEntities();
-});
+};
 
 defineExpose({
   findAvailableParkingSpotInRadius,
   findAvailableGarageInRadius,
   parkingSpots,
-  garages
+  garages,
+  runAnalysis
 });
 </script>
 
@@ -779,7 +1193,7 @@ defineExpose({
     }
   }
   
-  .parking-content, .garage-content {
+  .parking-content, .garage-content, .analysis-content {
     height: calc(100% - 50px);
     display: flex;
     flex-direction: column;
@@ -1000,6 +1414,358 @@ defineExpose({
         background-color: #2196f3;
       }
     }
+  }
+
+  // 智能分析内容
+  .analysis-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    background: var(--cl-panel-light);
+    border-radius: 4px;
+    margin-top: 10px;
+
+    .status-header {
+      background: #4caf50; // 修改为绿色背景
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+
+      h4 {
+        margin: 0;
+        color: white;
+        font-size: 16px;
+      }
+    }
+
+    .status-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+
+      .status-item {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        border-radius: 4px;
+        background: var(--cl-panel-dark);
+        
+        &.available {
+          border-left: 3px solid var(--cl-info);
+        }
+        
+        &.occupied {
+          border-left: 3px solid var(--cl-warning);
+        }
+        
+        &.free {
+          border-left: 3px solid var(--cl-success);
+        }
+        
+        .label {
+          display: block;
+          font-size: 12px;
+          color: var(--cl-text-secondary);
+          margin-bottom: 4px;
+        }
+        
+        .value {
+          display: block;
+          font-size: 18px;
+          font-weight: bold;
+          color: var(--cl-text);
+        }
+      }
+    }
+
+    .analysis-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+      
+      .control-btn {
+        padding: 10px;
+        background: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        
+        &:hover:not(:disabled) {
+          background: #357abd;
+        }
+        
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+      
+      .query-input {
+        input {
+          width: 100%;
+          padding: 8px 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 14px;
+          
+          &:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+          }
+          
+          &:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+
+    .analysis-output {
+      flex: 1;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      padding: 2px;
+      
+      .empty-state {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        padding: 20px;
+        color: #666;
+        text-align: center;
+        font-style: italic;
+      }
+      
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #4a90e2;
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid rgba(74, 144, 226, 0.2);
+          border-radius: 50%;
+          border-top-color: #4a90e2;
+          animation: spin 1s ease-in-out infinite;
+          margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      }
+      
+      .result-container {
+        .result-item {
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 6px;
+          margin-bottom: 12px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          
+          .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: #4a90e2;
+            color: white;
+            
+            .result-title {
+              font-weight: bold;
+              font-size: 14px;
+            }
+            
+            .result-time {
+              font-size: 12px;
+              opacity: 0.8;
+            }
+          }
+          
+          .result-summary {
+            padding: 10px;
+            background: #f0f7ff;
+            
+            h5 {
+              margin: 0 0 8px 0;
+              color: #2c5aa0;
+              font-size: 14px;
+            }
+            
+            .summary-item {
+              display: flex;
+              margin-bottom: 4px;
+              
+              .summary-label {
+                flex: 0 0 100px;
+                font-weight: 500;
+                color: #555;
+              }
+              
+              .summary-value {
+                flex: 1;
+                color: #000;
+              }
+            }
+          }
+          
+          .result-recommendations {
+            padding: 10px;
+            background: #eefbf5;
+            
+            h5 {
+              margin: 0 0 8px 0;
+              color: #00796b;
+              font-size: 14px;
+            }
+            
+            .recommendation-item {
+              display: flex;
+              align-items: flex-start;
+              margin-bottom: 8px;
+              padding: 8px;
+              background: rgba(255, 255, 255, 0.6);
+              border-radius: 4px;
+              
+              &.immediate {
+                border-left: 3px solid #ff5722;
+              }
+              
+              &.longTerm {
+                border-left: 3px solid #2196f3;
+              }
+              
+              .rec-badge {
+                flex: 0 0 auto;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: bold;
+                color: white;
+                margin-right: 8px;
+                
+                &.immediate {
+                  background: #ff5722;
+                }
+                
+                &.longterm {
+                  background: #2196f3;
+                }
+              }
+              
+              .rec-content {
+                flex: 1;
+                font-size: 13px;
+                
+                .rec-highlight {
+                  font-weight: bold;
+                  color: #d32f2f;
+                }
+                
+                .rec-priority {
+                  display: inline-block;
+                  padding: 1px 5px;
+                  border-radius: 3px;
+                  font-size: 10px;
+                  margin-left: 6px;
+                  color: white;
+                  
+                  &.高 {
+                    background: #d32f2f;
+                  }
+                  
+                  &.中 {
+                    background: #ff9800;
+                  }
+                  
+                  &.低 {
+                    background: #4caf50;
+                  }
+                }
+                
+                .rec-description {
+                  font-size: 12px;
+                  color: #666;
+                  margin-top: 4px;
+                }
+              }
+            }
+          }
+          
+          .result-content {
+            padding: 12px;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.6;
+            
+            h4, h5 {
+              color: #2c5aa0;
+              margin: 15px 0 10px 0;
+            }
+            
+            h4 {
+              font-size: 16px;
+            }
+            
+            h5 {
+              font-size: 14px;
+            }
+            
+            pre {
+              background: #f5f5f5;
+              padding: 10px;
+              border-radius: 4px;
+              overflow-x: auto;
+              font-family: monospace;
+              font-size: 13px;
+            }
+            
+            strong {
+              color: #2c5aa0;
+            }
+          }
+          
+          .result-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 12px;
+            background: #f5f5f5;
+            
+            .action-btn {
+              padding: 6px 12px;
+              background: #4a90e2;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 13px;
+              
+              &:hover {
+                background: #357abd;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 }
 </style>

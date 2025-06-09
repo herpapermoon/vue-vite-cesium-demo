@@ -530,7 +530,7 @@ class BikeMovementManager {
    * 处理单车到达目的地
    */
   handleBikeReachDestination(movingBike) {
-    console.log(`单车 ${movingBike.id} 到达目的地`);
+    // 移除详细日志输出
     
     // 获取终点位置
     const segment = movingBike.currentSegment;
@@ -546,17 +546,14 @@ class BikeMovementManager {
       
       if (nearbySpot) {
         // 找到车位，在车位内找个随机位置停车
-        console.log(`单车 ${movingBike.id} 找到附近车位 #${nearbySpot.id}，停入车位`);
         parkingPosition = this.findRandomPositionInParkingSpot(nearbySpot);
         usedParkingSpot = true;
       } else {
-        console.log(`单车 ${movingBike.id} 附近无可用车位，随机停放`);
         // 没找到车位，在终点附近生成随机位置（5-20米范围内）
         parkingPosition = this.generateRandomPositionNear(endPoint, 5, 20);
       }
     } else {
       // 30% 概率直接随机停放
-      console.log(`单车 ${movingBike.id} 随机停放`);
       parkingPosition = this.generateRandomPositionNear(endPoint, 5, 20);
     }
     
