@@ -20,6 +20,10 @@ class BikeMovementManager {
     this.updateInterval = 20; // 更新间隔（毫秒）
     this.storeUpdateInterval = 10000; // 10秒同步到store
     this.lastStoreUpdateTime = Date.now();
+    
+    // 车位相关数据
+    this.parkingSpots = [];
+    this.parkingSpotsLoaded = false;
   }
 
   /**
@@ -29,7 +33,179 @@ class BikeMovementManager {
     this.viewer = viewer;
     bikeStore.setViewer(viewer);
     await this.loadRoadNetwork();
+    // 加载车位数据
+    await this.loadParkingSpots();
     console.log('BikeMovementManager 初始化完成');
+  }
+
+  /**
+   * 加载车位数据
+   */
+  async loadParkingSpots() {
+    try {
+      const response = await fetch('/src/assets/ships/车位new.geojson');
+      const data = await response.json();
+      
+      this.parkingSpots = data.features.map((feature, index) => {
+        const coordinates = feature.geometry.coordinates;
+        const center = this.calculatePolygonCenter(coordinates[0][0]);
+        const spotId = feature.properties?.id || feature.properties?.ID || feature.properties?.name || (index + 1);
+        
+        const area = this.calculatePolygonArea(coordinates[0][0]);
+        const maxCapacity = Math.max(1, Math.floor(area / 1)); // 每1平方米1辆单车
+        
+        return {
+          id: spotId,
+          coordinates: coordinates,
+          center: center,
+          area: area,
+          maxCapacity: maxCapacity,
+          bikeCount: 0 // 初始无单车
+        };
+      });
+      
+      this.parkingSpotsLoaded = true;
+      console.log(`成功加载 ${this.parkingSpots.length} 个车位数据`);
+      return this.parkingSpots;
+    } catch (error) {
+      console.error('加载车位数据失败:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * 计算多边形中心点
+   */
+  calculatePolygonCenter(coordinates) {
+    const sumLon = coordinates.reduce((sum, coord) => sum + coord[0], 0);
+    const sumLat = coordinates.reduce((sum, coord) => sum + coord[1], 0);
+    return [
+      sumLon / coordinates.length,
+      sumLat / coordinates.length
+    ];
+  }
+  
+  /**
+   * 计算多边形面积（球面面积计算）
+   */
+  calculatePolygonArea(coordinates) {
+    if (!coordinates || coordinates.length < 3) return 0;
+    
+    const toRadians = (degrees) => degrees * Math.PI / 180;
+    let area = 0;
+    const R = 6371000;
+    
+    for (let i = 0; i < coordinates.length; i++) {
+      const j = (i + 1) % coordinates.length;
+      const lat1 = toRadians(coordinates[i][1]);
+      const lat2 = toRadians(coordinates[j][1]);
+      const deltaLon = toRadians(coordinates[j][0] - coordinates[i][0]);
+      
+      area += deltaLon * (2 + Math.sin(lat1) + Math.sin(lat2));
+    }
+    
+    area = Math.abs(area * R * R / 2);
+    return area;
+  }
+  
+  /**
+   * 更新车位占用状态
+   */
+  updateParkingSpotsStatus() {
+    if (!this.parkingSpotsLoaded) return;
+    
+    const bikes = bikeStore.getAllBikes();
+    if (!bikes) return;
+    
+    this.parkingSpots.forEach(spot => {
+      const bikesInSpot = bikes.filter(bike => {
+        if (bike.status !== BikeStatus.PARKED) return false;
+        return this.isPointInPolygon(
+          [bike.longitude, bike.latitude],
+          spot.coordinates[0][0]
+        );
+      });
+      
+      spot.bikeCount = bikesInSpot.length;
+    });
+  }
+  
+  /**
+   * 判断点是否在多边形内
+   */
+  isPointInPolygon(point, polygon) {
+    const [x, y] = point;
+    let inside = false;
+    
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const [xi, yi] = polygon[i];
+      const [xj, yj] = polygon[j];
+      
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    
+    return inside;
+  }
+  
+  /**
+   * 查找附近可用的车位
+   */
+  findAvailableParkingSpotInRadius(centerLon, centerLat, radiusInMeters = 100) {
+    if (!this.parkingSpotsLoaded || this.parkingSpots.length === 0) {
+      return null;
+    }
+    
+    // 更新车位状态
+    this.updateParkingSpotsStatus();
+    
+    // 筛选附近未满的车位
+    const nearbySpots = this.parkingSpots.filter(spot => {
+      if (!spot.center) return false;
+      
+      const distance = calculateDistance([centerLon, centerLat], spot.center);
+      return distance <= radiusInMeters && spot.bikeCount < spot.maxCapacity;
+    });
+    
+    if (nearbySpots.length === 0) {
+      return null;
+    }
+    
+    // 按距离排序
+    nearbySpots.sort((a, b) => {
+      const distA = calculateDistance([centerLon, centerLat], a.center);
+      const distB = calculateDistance([centerLon, centerLat], b.center);
+      return distA - distB;
+    });
+    
+    return nearbySpots[0];
+  }
+  
+  /**
+   * 在车位内找一个随机位置
+   */
+  findRandomPositionInParkingSpot(spot) {
+    if (!spot || !spot.coordinates || !spot.coordinates[0] || !spot.coordinates[0][0]) {
+      return null;
+    }
+    
+    const polygon = spot.coordinates[0][0];
+    const center = spot.center;
+    
+    // 尝试10次生成车位内的随机点
+    for (let i = 0; i < 10; i++) {
+      // 在车位中心5-10米范围内生成随机点
+      const randomPos = this.generateRandomPositionNear(center, 1, 5);
+      
+      // 检查点是否在多边形内
+      if (this.isPointInPolygon(randomPos, polygon)) {
+        return randomPos;
+      }
+    }
+    
+    // 如果随机生成失败，直接返回中心点
+    return center;
   }
 
   /**
@@ -360,21 +536,42 @@ class BikeMovementManager {
     const segment = movingBike.currentSegment;
     const endPoint = movingBike.direction === 1 ? segment.end : segment.start;
     
-    // 在终点附近生成随机位置（5-20米范围内）
-    const randomPosition = this.generateRandomPositionNear(endPoint, 5, 20);
+    let parkingPosition;
+    let usedParkingSpot = false;
+    
+    // 70% 概率寻找附近车位停车
+    if (Math.random() < 0.7) {
+      // 寻找100米内可用的车位
+      const nearbySpot = this.findAvailableParkingSpotInRadius(endPoint[0], endPoint[1], 100);
+      
+      if (nearbySpot) {
+        // 找到车位，在车位内找个随机位置停车
+        console.log(`单车 ${movingBike.id} 找到附近车位 #${nearbySpot.id}，停入车位`);
+        parkingPosition = this.findRandomPositionInParkingSpot(nearbySpot);
+        usedParkingSpot = true;
+      } else {
+        console.log(`单车 ${movingBike.id} 附近无可用车位，随机停放`);
+        // 没找到车位，在终点附近生成随机位置（5-20米范围内）
+        parkingPosition = this.generateRandomPositionNear(endPoint, 5, 20);
+      }
+    } else {
+      // 30% 概率直接随机停放
+      console.log(`单车 ${movingBike.id} 随机停放`);
+      parkingPosition = this.generateRandomPositionNear(endPoint, 5, 20);
+    }
     
     // 更新store状态为停车
     bikeStore.updateBike(movingBike.id, { 
       status: BikeStatus.PARKED,
-      longitude: randomPosition[0],
-      latitude: randomPosition[1]
+      longitude: parkingPosition[0],
+      latitude: parkingPosition[1]
     });
     
     // 更新实体 - 确保广告牌状态和位置同步更新
     bikeStore.updateBikeEntity(movingBike.id, {
       status: BikeStatus.PARKED,
-      longitude: randomPosition[0],
-      latitude: randomPosition[1]
+      longitude: parkingPosition[0],
+      latitude: parkingPosition[1]
     });
 
     // 启动另一辆停车的单车
@@ -383,6 +580,11 @@ class BikeMovementManager {
         this.startRandomParkedBike();
       }
     }, 500 + Math.random() * 1500);
+    
+    // 如果使用了车位，更新车位状态
+    if (usedParkingSpot) {
+      this.updateParkingSpotsStatus();
+    }
   }
 
   /**
