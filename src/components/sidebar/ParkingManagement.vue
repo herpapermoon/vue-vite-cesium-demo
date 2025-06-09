@@ -787,13 +787,13 @@ defineExpose({
   
   .status-header {
     padding: 10px;
-    background: var(--cl-panel-dark);
+    background: #4a90e2; // 修改为淡蓝色背景，与上方标签保持一致
     border-radius: 4px;
     margin-bottom: 10px;
 
     h4 {
       margin: 0 0 10px 0;
-      color: var(--cl-text);
+      color: white; // 改为白色以在蓝色背景上更清晰
       font-size: 14px;
     }
   }
