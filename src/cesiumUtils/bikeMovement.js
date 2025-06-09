@@ -17,8 +17,7 @@ class BikeMovementManager {
     // 临时移动数据数组 - 只存储移动相关信息
     this.movingBikes = [];
     this.lastUpdateTime = Date.now();
-    // 减少更新间隔，使动画更流畅
-    this.updateInterval = 20; // 从50ms减少到20ms
+    this.updateInterval = 20; // 更新间隔（毫秒）
     this.storeUpdateInterval = 10000; // 10秒同步到store
     this.lastStoreUpdateTime = Date.now();
   }
@@ -224,7 +223,7 @@ class BikeMovementManager {
 
     const { segment, progress } = nearestRoad;
     
-    // 创建临时移动数据
+    // 创建临时移动数据，添加visitedSegments记录已走过的路径
     const movingBike = {
       id: bike.id,
       longitude: bike.longitude,
@@ -232,11 +231,11 @@ class BikeMovementManager {
       currentSegment: segment,
       progress: progress,
       direction: Math.random() > 0.5 ? 1 : -1,
-      // 增加移动速度，原来的值太小导致移动不明显
-      speed: 0.001 + Math.random() * 0.002, // 增加10倍速度
-      maxSegments: 3 + Math.floor(Math.random() * 7),
+      speed: 0.001 + Math.random() * 0.002,
+      maxSegments: 5 + Math.floor(Math.random() * 10), // 增加最大路段数
       segmentCount: 0,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      visitedSegments: new Set([segment.id]) // 添加已访问路段记录
     };
 
     this.movingBikes.push(movingBike);
@@ -285,7 +284,27 @@ class BikeMovementManager {
       const movingBike = this.movingBikes[i];
       
       if (!this.updateSingleMovingBike(movingBike)) {
-        // 如果返回false，说明单车已到达目的地，从数组中移除
+        // 如果返回false，说明单车已到达线段末端
+        
+        // 新增：50%概率继续骑行，50%概率停车
+        if (Math.random() < 0.5 && movingBike.segmentCount < movingBike.maxSegments) {
+          // 继续骑行 - 寻找新路段
+          const nextSegmentInfo = this.getNextSegment(movingBike.currentSegment, movingBike.direction, movingBike.visitedSegments);
+          
+          if (nextSegmentInfo) {
+            // 找到了新路段，更新信息并继续
+            movingBike.currentSegment = nextSegmentInfo.segment;
+            movingBike.direction = nextSegmentInfo.direction;
+            movingBike.progress = nextSegmentInfo.startProgress;
+            movingBike.segmentCount++;
+            
+            // 添加到已访问路段集合
+            movingBike.visitedSegments.add(nextSegmentInfo.segment.id);
+            continue; // 继续下一次循环
+          }
+        }
+        
+        // 如果决定停车或没有找到新路段，处理到达目的地
         this.handleBikeReachDestination(movingBike);
         this.movingBikes.splice(i, 1);
       }
@@ -303,23 +322,7 @@ class BikeMovementManager {
 
     // 检查是否到达线段末端
     if (movingBike.progress <= 0 || movingBike.progress >= 1) {
-      movingBike.segmentCount++;
-      
-      // 检查是否已经走完预定路段数
-      if (movingBike.segmentCount >= movingBike.maxSegments) {
-        return false; // 到达目的地
-      }
-      
-      // 寻找下一个路段
-      const nextSegmentInfo = this.getNextSegment(currentSegment, direction);
-      
-      if (nextSegmentInfo) {
-        movingBike.currentSegment = nextSegmentInfo.segment;
-        movingBike.direction = nextSegmentInfo.direction;
-        movingBike.progress = nextSegmentInfo.startProgress;
-      } else {
-        return false; // 没有下一个路段，停止
-      }
+      return false; // 到达线段末端，交由updateMovingBikes处理
     }
 
     // 确保进度在有效范围内
@@ -337,11 +340,11 @@ class BikeMovementManager {
     movingBike.latitude = newPosition[1];
     movingBike.lastUpdate = Date.now();
 
-    // 实时更新实体位置（不更新store，减少开销）
+    // 实时更新实体位置
     bikeStore.updateBikeEntity(movingBike.id, {
       longitude: newPosition[0],
       latitude: newPosition[1],
-      height: 20 // 确保高度适当，使单车在地表上方可见
+      height: 20 // 确保高度适当
     });
 
     return true; // 继续移动
@@ -353,27 +356,60 @@ class BikeMovementManager {
   handleBikeReachDestination(movingBike) {
     console.log(`单车 ${movingBike.id} 到达目的地`);
     
+    // 获取终点位置
+    const segment = movingBike.currentSegment;
+    const endPoint = movingBike.direction === 1 ? segment.end : segment.start;
+    
+    // 在终点附近生成随机位置（5-20米范围内）
+    const randomPosition = this.generateRandomPositionNear(endPoint, 5, 20);
+    
     // 更新store状态为停车
     bikeStore.updateBike(movingBike.id, { 
       status: BikeStatus.PARKED,
-      longitude: movingBike.longitude,
-      latitude: movingBike.latitude
+      longitude: randomPosition[0],
+      latitude: randomPosition[1]
     });
     
+    // 更新实体 - 确保广告牌状态和位置同步更新
     bikeStore.updateBikeEntity(movingBike.id, {
       status: BikeStatus.PARKED,
-      longitude: movingBike.longitude,
-      latitude: movingBike.latitude
+      longitude: randomPosition[0],
+      latitude: randomPosition[1]
     });
 
-    // 80% 概率启动另一辆单车
-    if (Math.random() > 0.2) {
-      setTimeout(() => {
-        if (this.isActive) {
-          this.startRandomParkedBike();
-        }
-      }, 500 + Math.random() * 1500);
-    }
+    // 启动另一辆停车的单车
+    setTimeout(() => {
+      if (this.isActive) {
+        this.startRandomParkedBike();
+      }
+    }, 500 + Math.random() * 1500);
+  }
+
+  /**
+   * 在指定点附近生成随机位置
+   * @param {Array} centerPoint - 中心点 [lon, lat]
+   * @param {number} minDistance - 最小距离（米）
+   * @param {number} maxDistance - 最大距离（米）
+   * @returns {Array} 随机位置 [lon, lat]
+   */
+  generateRandomPositionNear(centerPoint, minDistance, maxDistance) {
+    // 随机角度 (0-360度)
+    const angle = Math.random() * Math.PI * 2;
+    
+    // 随机距离 (minDistance-maxDistance米)
+    const distance = minDistance + Math.random() * (maxDistance - minDistance);
+    
+    // 转换为经纬度偏移量（粗略估计：1度约等于111km）
+    const distanceDeg = distance / 111000;
+    
+    // 计算偏移
+    const offsetX = Math.cos(angle) * distanceDeg;
+    const offsetY = Math.sin(angle) * distanceDeg;
+    
+    return [
+      centerPoint[0] + offsetX,
+      centerPoint[1] + offsetY
+    ];
   }
 
   /**
@@ -408,31 +444,46 @@ class BikeMovementManager {
   }
 
   /**
-   * 获取下一个连接的路段
+   * 获取下一个连接的路段，避免选择之前走过的路段
+   * @param {Object} currentSegment - 当前路段
+   * @param {number} direction - 当前方向 
+   * @param {Set} visitedSegments - 已访问过的路段ID集合
    */
-  getNextSegment(currentSegment, direction) {
+  getNextSegment(currentSegment, direction, visitedSegments) {
     const currentNodeId = direction === 1 ? currentSegment.endNodeId : currentSegment.startNodeId;
     const node = this.roadNetwork.nodes[currentNodeId];
     
     if (!node || node.connections.length === 0) return null;
 
-    const availableConnections = node.connections.filter(conn => 
-      conn.segmentId !== currentSegment.id
+    // 筛选未访问过的连接路段
+    let availableConnections = node.connections.filter(conn => 
+      conn.segmentId !== currentSegment.id && // 不是当前路段
+      !visitedSegments.has(conn.segmentId) // 未访问过
     );
 
+    // 如果没有未访问过的路段，允许使用已访问过的路段（但不回头）
     if (availableConnections.length === 0) {
-      return {
-        segment: currentSegment,
-        direction: -direction,
-        startProgress: direction === 1 ? 1 : 0
-      };
+      availableConnections = node.connections.filter(conn => 
+        conn.segmentId !== currentSegment.id // 只保证不回头
+      );
+      
+      // 仍然没有可用路段，允许掉头
+      if (availableConnections.length === 0) {
+        return {
+          segment: currentSegment,
+          direction: -direction,
+          startProgress: direction === 1 ? 1 : 0
+        };
+      }
     }
 
+    // 随机选择一个可用连接
     const randomConnection = availableConnections[Math.floor(Math.random() * availableConnections.length)];
     const nextSegment = this.roadSegments.find(seg => seg.id === randomConnection.segmentId);
     
     if (!nextSegment) return null;
 
+    // 确定在新路段上的方向
     const nextDirection = randomConnection.nextNodeId === nextSegment.startNodeId ? 1 : -1;
 
     return {
