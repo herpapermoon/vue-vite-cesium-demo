@@ -25,15 +25,18 @@ export async function analyzeParkingData(parkingData, customQuery = null) {
     // 调用API
     const result = await callDeepseekAPI(prompt);
     
-    // 解析结果
-    return parseAnalysisResult(result);
+    // 直接返回分析结果
+    return {
+      success: true,
+      detailedAnalysis: result,
+      rawResponse: result
+    };
   } catch (error) {
     console.error('车位分析出错:', error);
     return {
       success: false,
       error: error.message || '分析失败',
-      recommendations: [],
-      summary: null,
+      detailedAnalysis: `分析过程中发生错误: ${error.message || '未知错误'}`,
       rawResponse: null
     };
   }
@@ -134,7 +137,7 @@ ${lowOccupancySpots.map(spot =>
 3. 具体的调配建议（如从哪个车位调配到哪个车位）
 4. 车位分布的合理性评估和长期优化建议
 
-要求回答清晰、具体、可操作，并以JSON格式的摘要和建议开始，然后是详细分析。`;
+请提供直接的分析文本，以"资源分布现状"开始，然后是"问题诊断"、"具体调配方案"和"空间优化建议"等部分。回答应当具体、清晰、可操作，不需要包含JSON格式的数据。`;
 
   // 如果有自定义查询，添加到提示中
   if (customQuery) {
@@ -159,7 +162,7 @@ async function callDeepseekAPI(prompt) {
       messages: [
         {
           role: 'system',
-          content: '你是一个专业的停车场管理分析专家，擅长分析车位占用数据并提供调配建议。回答要具体、清晰、可操作。'
+          content: '你是一个专业的停车场管理分析专家，擅长分析车位占用数据并提供调配建议。回答要具体、清晰、可操作，格式包括资源分布现状、问题诊断、具体调配方案（以表格形式展示）、空间优化建议、数据监测改进等部分。不要输出任何JSON格式的内容。'
         },
         {
           role: 'user',
@@ -209,156 +212,8 @@ async function callDeepseekAPI(prompt) {
     }
   } catch (error) {
     console.error('调用DeepSeek API出错:', error);
-    
-    // 如果API调用失败，使用本地模拟响应
-    return generateFallbackResponse();
+    throw error; // 向上抛出错误，不再使用本地模拟响应
   }
-}
-
-/**
- * 生成本地模拟响应（当API调用失败时使用）
- * @returns {String} 模拟的分析结果
- */
-function generateFallbackResponse() {
-  return `{
-  "summary": {
-    "highOccupancyAreas": ["车位 #03", "车位 #07"],
-    "lowOccupancyAreas": ["车位 #09", "车位 #15"],
-    "overallStatus": "需要调配"
-  },
-  "recommendations": [
-    {
-      "type": "immediate",
-      "from": "车位 #09",
-      "to": "车位 #03",
-      "amount": 5,
-      "priority": "高"
-    },
-    {
-      "type": "immediate",
-      "from": "车位 #15",
-      "to": "车位 #07",
-      "amount": 3,
-      "priority": "中"
-    },
-    {
-      "type": "longTerm",
-      "action": "增设",
-      "location": "车位 #03 周边",
-      "description": "在车位 #03 周围增设2个新车位点"
-    }
-  ]
-}
-
-## 详细分析
-
-### 高占用区域分析
-
-车位 #03 和 #07 的占用率已超过90%，处于高风险状态。这些车位位于校园主要教学楼周边，是人流密集区域，需要立即采取措施避免满位情况。
-
-### 低占用区域分析
-
-车位 #09 和 #15 的占用率低于30%，资源闲置严重。特别是车位 #09，占用率仅15.8%，但容量较大，是理想的调配来源。
-
-### 调配建议
-
-1. **短期调配方案**:
-   - 从车位 #09 向车位 #03 调配5辆单车
-   - 从车位 #15 向车位 #07 调配3辆单车
-
-2. **中长期优化建议**:
-   - 在车位 #03 周围增设2个新车位点
-   - 调整车位 #15 的位置到人流更密集区域
-   - 增加移动应用实时显示车位占用情况功能
-
-### 车位分布合理性评估
-
-当前车位分布存在不均衡现象，东区车位过多而西区不足。建议根据占用率热力图，调整车位布局，提高整体利用效率。`;
-}
-
-/**
- * 解析分析结果
- * @param {String} response API响应内容
- * @returns {Object} 结构化的分析结果
- */
-function parseAnalysisResult(response) {
-  try {
-    // 尝试从响应中提取JSON部分
-    const jsonMatch = response.match(/\{[\s\S]*?\}(?=\n|$)/);
-    
-    let summary = null;
-    let recommendations = [];
-    
-    if (jsonMatch) {
-      const jsonData = JSON.parse(jsonMatch[0]);
-      summary = jsonData.summary || null;
-      recommendations = jsonData.recommendations || [];
-    }
-    
-    // 识别可能的行动建议
-    if (!recommendations.length) {
-      // 如果没有从JSON中提取到建议，尝试从文本中识别
-      const textRecommendations = extractRecommendationsFromText(response);
-      if (textRecommendations.length) {
-        recommendations = textRecommendations;
-      }
-    }
-    
-    return {
-      success: true,
-      summary,
-      recommendations,
-      detailedAnalysis: response.replace(jsonMatch ? jsonMatch[0] : '', '').trim(),
-      rawResponse: response
-    };
-  } catch (error) {
-    console.error('解析分析结果出错:', error);
-    return {
-      success: true,
-      summary: null,
-      recommendations: [],
-      detailedAnalysis: response,
-      rawResponse: response
-    };
-  }
-}
-
-/**
- * 从文本中提取调配建议
- * @param {String} text 分析文本
- * @returns {Array} 提取的建议
- */
-function extractRecommendationsFromText(text) {
-  const recommendations = [];
-  
-  // 识别调配建议的正则表达式
-  const fromToPattern = /从(车位\s*#?\d+|车库\s*#?\d+).+?[向到](车位\s*#?\d+|车库\s*#?\d+).+?调配.*?(\d+)辆/g;
-  const addPattern = /在(车位\s*#?\d+|车库\s*#?\d+).+?增[设加].*?(\d+)个?/g;
-  
-  // 提取"从A到B调配X辆"模式
-  let match;
-  while ((match = fromToPattern.exec(text)) !== null) {
-    recommendations.push({
-      type: "immediate",
-      from: match[1].trim(),
-      to: match[2].trim(),
-      amount: parseInt(match[3]) || 1,
-      priority: "中"
-    });
-  }
-  
-  // 提取"在A增设X个"模式
-  while ((match = addPattern.exec(text)) !== null) {
-    recommendations.push({
-      type: "longTerm",
-      action: "增设",
-      location: match[1].trim(),
-      amount: parseInt(match[2]) || 1,
-      description: match[0].trim()
-    });
-  }
-  
-  return recommendations;
 }
 
 /**
