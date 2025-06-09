@@ -8,6 +8,9 @@ const API_KEY = 'sk-yepxevmdjwzkdyibbsjyafrynewmxkjnjbmzpctodpksvflm';
 const API_BASE_URL = 'https://api.siliconflow.cn/v1';
 const MODEL_NAME = 'deepseek-ai/DeepSeek-V3';
 
+// 建筑物数据
+let buildingsData = null;
+
 /**
  * 分析车位占用情况并提供调配建议
  * @param {Object} parkingData 车位数据，包括parkingSpots和garages
@@ -18,6 +21,11 @@ export async function analyzeParkingData(parkingData, customQuery = null) {
   try {
     // 准备分析数据
     const analysisData = prepareAnalysisData(parkingData);
+    
+    // 加载建筑物数据
+    if (!buildingsData) {
+      buildingsData = await loadBuildingsData();
+    }
     
     // 构建提示内容
     const prompt = buildAnalysisPrompt(analysisData, customQuery);
@@ -40,6 +48,104 @@ export async function analyzeParkingData(parkingData, customQuery = null) {
       rawResponse: null
     };
   }
+}
+
+/**
+ * 加载建筑物数据
+ * @returns {Promise<Array>} 建筑物数据
+ */
+async function loadBuildingsData() {
+  try {
+    const response = await fetch('/src/assets/ships/wlc.geojson');
+    const data = await response.json();
+    return data.features;
+  } catch (error) {
+    console.error('加载建筑物数据失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 计算两点之间的距离（Haversine公式）
+ * @param {Array} point1 第一个点 [经度, 纬度]
+ * @param {Array} point2 第二个点 [经度, 纬度]
+ * @returns {Number} 距离（米）
+ */
+function calculateDistance(point1, point2) {
+  if (!point1 || !point2) return Infinity;
+  
+  const [lon1, lat1] = point1;
+  const [lon2, lat2] = point2;
+  
+  const R = 6371000; // 地球半径（米）
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+/**
+ * 计算多边形中心点
+ * @param {Array} coordinates 多边形坐标
+ * @returns {Array} 中心点 [经度, 纬度]
+ */
+function calculatePolygonCenter(coordinates) {
+  // 处理多边形数据，可能有多层嵌套
+  let points = coordinates;
+  if (Array.isArray(coordinates[0]) && Array.isArray(coordinates[0][0])) {
+    points = coordinates[0];
+  }
+  if (Array.isArray(points[0]) && Array.isArray(points[0][0])) {
+    points = points[0];
+  }
+  
+  const sumLon = points.reduce((sum, coord) => sum + coord[0], 0);
+  const sumLat = points.reduce((sum, coord) => sum + coord[1], 0);
+  
+  return [
+    sumLon / points.length,
+    sumLat / points.length
+  ];
+}
+
+/**
+ * 找到最近的建筑物
+ * @param {Array} point 点坐标 [经度, 纬度]
+ * @param {Array} buildings 建筑物数据
+ * @returns {Object} 最近的建筑物信息
+ */
+function findNearestBuilding(point, buildings) {
+  if (!point || !buildings || buildings.length === 0) {
+    return { name: "未知建筑", distance: Infinity };
+  }
+  
+  let nearestBuilding = null;
+  let minDistance = Infinity;
+  
+  buildings.forEach(building => {
+    // 计算建筑物中心点
+    const buildingCenter = calculatePolygonCenter(building.geometry.coordinates);
+    
+    // 计算距离
+    const distance = calculateDistance(point, buildingCenter);
+    
+    // 更新最近的建筑物
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestBuilding = {
+        name: building.properties.name || "未命名建筑",
+        distance: distance,
+        center: buildingCenter
+      };
+    }
+  });
+  
+  return nearestBuilding || { name: "未知建筑", distance: Infinity };
 }
 
 /**
@@ -96,20 +202,34 @@ function prepareAnalysisData(parkingData) {
 function buildAnalysisPrompt(analysisData, customQuery) {
   const { stats, parkingSpots, garages } = analysisData;
   
-  // 识别高占用车位
+  // 识别高占用车位并关联建筑物
   const highOccupancySpots = parkingSpots
     .filter(spot => parseFloat(spot.occupancyRate) > 90)
     .sort((a, b) => parseFloat(b.occupancyRate) - parseFloat(a.occupancyRate))
-    .slice(0, 5); // 取占用率最高的5个车位
+    .slice(0, 5) // 取占用率最高的5个车位
+    .map(spot => {
+      const nearestBuilding = findNearestBuilding(spot.center, buildingsData);
+      return {
+        ...spot,
+        nearestBuilding
+      };
+    });
   
-  // 识别低占用车位
+  // 识别低占用车位并关联建筑物
   const lowOccupancySpots = parkingSpots
     .filter(spot => parseFloat(spot.occupancyRate) < 30)
     .sort((a, b) => parseFloat(a.occupancyRate) - parseFloat(b.occupancyRate))
-    .slice(0, 5); // 取占用率最低的5个车位
+    .slice(0, 5) // 取占用率最低的5个车位
+    .map(spot => {
+      const nearestBuilding = findNearestBuilding(spot.center, buildingsData);
+      return {
+        ...spot,
+        nearestBuilding
+      };
+    });
   
   // 基础提示模板
-  let promptTemplate = `分析以下车位和车库的占用情况，找出需要调配的区域和优化建议：
+  let promptTemplate = `分析以下车位和车库的占用情况，根据与周边建筑物的关系，找出需要调配的区域和优化建议：
 
 统计信息:
 - 总车位数: ${stats.totalSpots}
@@ -121,23 +241,23 @@ function buildAnalysisPrompt(analysisData, customQuery) {
 - 已占用车库数: ${stats.occupiedGarages}
 - 已满车库数: ${stats.fullGarages}
 
-占用率最高的车位:
+占用率最高的车位及其最近的建筑:
 ${highOccupancySpots.map(spot => 
-  `- 车位 #${spot.id}: 占用率 ${spot.occupancyRate}%, 当前 ${spot.bikeCount}/${spot.maxCapacity}, 位置: [${spot.center ? spot.center.join(', ') : '未知'}]`
+  `- 车位 #${spot.id}: 占用率 ${spot.occupancyRate}%, 当前 ${spot.bikeCount}/${spot.maxCapacity}, 附近建筑: ${spot.nearestBuilding.name || '未知建筑'} (距离: ${spot.nearestBuilding.distance.toFixed(0)}米)`
 ).join('\n')}
 
-占用率最低的车位:
+占用率最低的车位及其最近的建筑:
 ${lowOccupancySpots.map(spot => 
-  `- 车位 #${spot.id}: 占用率 ${spot.occupancyRate}%, 当前 ${spot.bikeCount}/${spot.maxCapacity}, 位置: [${spot.center ? spot.center.join(', ') : '未知'}]`
+  `- 车位 #${spot.id}: 占用率 ${spot.occupancyRate}%, 当前 ${spot.bikeCount}/${spot.maxCapacity}, 附近建筑: ${spot.nearestBuilding.name || '未知建筑'} (距离: ${spot.nearestBuilding.distance.toFixed(0)}米)`
 ).join('\n')}
 
 请根据以上数据分析:
-1. 哪些区域车位严重不足，需要优先调配
-2. 哪些区域有闲置资源，可以作为调配来源
-3. 具体的调配建议（如从哪个车位调配到哪个车位）
-4. 车位分布的合理性评估和长期优化建议
+1. 根据车位与建筑物的关系，分析哪些建筑物附近停车位紧张，哪些建筑物附近停车位宽松
+2. 提供具体建议，说明如何进行车位调配（例如："教学楼附近停车位紧张，应从图书馆调配车位"）
+3. 针对高占用率区域，提出缓解措施
+4. 针对低占用率区域，提出提高利用率的建议
 
-请提供直接的分析文本，以"资源分布现状"开始，然后是"问题诊断"、"具体调配方案"和"空间优化建议"等部分。回答应当具体、清晰、可操作，不需要包含JSON格式的数据。`;
+请提供直接的分析文本，以"建筑区域停车现状"开始，然后是"关键建筑区域分析"、"调配建议"和"优化措施"等部分。回答应当具体、清晰、可操作，不需要包含JSON格式的数据。回答中必须明确提及具体建筑名称。不要分条可以分段。因为是测试数据所以可能问题较大，请以尽量温和的语言提出建议`;
 
   // 如果有自定义查询，添加到提示中
   if (customQuery) {
@@ -162,7 +282,7 @@ async function callDeepseekAPI(prompt) {
       messages: [
         {
           role: 'system',
-          content: '你是一个专业的停车场管理分析专家，擅长分析车位占用数据并提供调配建议。回答要具体、清晰、可操作，格式包括资源分布现状、问题诊断、具体调配方案（以表格形式展示）、空间优化建议、数据监测改进等部分。不要输出任何JSON格式的内容。'
+          content: '你是一个专业的校园停车场管理分析专家，擅长分析车位占用数据并提供调配建议。回答时必须根据车位附近的建筑物名称分析停车情况，例如"教学楼附近停车位紧张"或"图书馆周边停车位宽松"。请确保分析中明确提及具体建筑名称，并根据建筑功能和车位状况提供合理建议。不要输出任何JSON格式的内容。'
         },
         {
           role: 'user',
