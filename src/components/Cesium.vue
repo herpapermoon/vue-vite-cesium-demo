@@ -543,7 +543,25 @@ const btnClickHandler = (btn) => {
       break
     }
     
-    // ...existing code for other cases...
+    // 添加校园建筑功能处理
+    case 'whiteBuild': {
+      caller(active, 
+        () => {
+          // 激活校园建筑
+          setWhiteBuild(viewer3D, true)
+          showNotification('模型加载', '正在加载校园建筑模型...', 'info')
+        }, 
+        () => {
+          // 关闭校园建筑
+          setWhiteBuild(viewer3D, false)
+          showNotification('模型卸载', '已移除校园建筑模型', 'info')
+          back2Home()
+        }
+      )
+      break
+    }
+    
+    // ...其他现有case...
     
     default: break
   }

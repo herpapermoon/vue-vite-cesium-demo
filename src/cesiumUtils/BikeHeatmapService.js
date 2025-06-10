@@ -262,9 +262,11 @@ class BikeHeatmapService {
       });
     }
     
-    // 使用更简单的颜色方案替代彩虹色
-    const heatColor = 'rgba(255, 0, 0, 0.8)'; // 热点中心颜色
-    const fadeColor = 'rgba(255, 0, 0, 0)';   // 热点边缘颜色
+    // 创建密度网格
+    const gridSize = 20; // 网格大小
+    const rows = Math.ceil(canvas.height / gridSize);
+    const cols = Math.ceil(canvas.width / gridSize);
+    const densityGrid = Array(rows).fill().map(() => Array(cols).fill(0));
     
     // 转换坐标并筛选有效点
     const points = bikeData.map(bike => {
@@ -283,37 +285,81 @@ class BikeHeatmapService {
       return !isNaN(point.x) && !isNaN(point.y);
     });
     
-    // 在画布上绘制热力点
+    // 计算每个网格的密度
     points.forEach(point => {
-      // 根据数据密度调整半径
-      const radius = 20; // 调整热点大小
-      const intensity = 0.5; // 固定热点强度以避免过度透明
+      const gridX = Math.floor(point.x / gridSize);
+      const gridY = Math.floor(point.y / gridSize);
       
-      // 创建径向渐变
-      const radialGradient = ctx.createRadialGradient(
-        point.x, point.y, 0,
-        point.x, point.y, radius
-      );
+      if (gridX >= 0 && gridX < cols && gridY >= 0 && gridY < rows) {
+        densityGrid[gridY][gridX] += point.weight;
+      }
+    });
+    
+    // 找出最大密度值
+    let maxDensity = 0;
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        maxDensity = Math.max(maxDensity, densityGrid[i][j]);
+      }
+    }
+    
+    // 定义颜色分级 - 从蓝色(冷)到红色(热)的渐变
+    const getColorForDensity = (density) => {
+      const normalizedDensity = density / maxDensity;
       
-      // 简化渐变，只使用红色到透明
-      radialGradient.addColorStop(0, heatColor);
-      radialGradient.addColorStop(1, fadeColor);
+      // 颜色分级 (5级)
+      if (normalizedDensity < 0.2) {
+        return 'rgba(0, 0, 255, 0.7)';  // 蓝色 - 非常低密度
+      } else if (normalizedDensity < 0.4) {
+        return 'rgba(0, 255, 255, 0.7)'; // 青色 - 低密度
+      } else if (normalizedDensity < 0.6) {
+        return 'rgba(0, 255, 0, 0.7)';   // 绿色 - 中等密度
+      } else if (normalizedDensity < 0.8) {
+        return 'rgba(255, 255, 0, 0.7)';  // 黄色 - 高密度
+      } else {
+        return 'rgba(255, 0, 0, 0.7)';    // 红色 - 非常高密度
+      }
+    };
+    
+    // 绘制热力点
+    points.forEach(point => {
+      const gridX = Math.floor(point.x / gridSize);
+      const gridY = Math.floor(point.y / gridSize);
       
-      // 绘制热点
-      ctx.beginPath();
-      ctx.fillStyle = radialGradient;
-      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      if (gridX >= 0 && gridX < cols && gridY >= 0 && gridY < rows) {
+        const density = densityGrid[gridY][gridX];
+        const radius = 25; // 热点半径
+        
+        // 根据密度获取颜色
+        const centerColor = getColorForDensity(density);
+        // 透明版本用于渐变边缘
+        const fadeColor = centerColor.replace(/[\d.]+\)$/, '0)');
+        
+        // 创建径向渐变
+        const radialGradient = ctx.createRadialGradient(
+          point.x, point.y, 0,
+          point.x, point.y, radius
+        );
+        
+        radialGradient.addColorStop(0, centerColor);
+        radialGradient.addColorStop(1, fadeColor);
+        
+        // 绘制热点
+        ctx.beginPath();
+        ctx.fillStyle = radialGradient;
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     });
     
     // 后处理 - 增强对比度和清晰度
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
     
-    // 增强对比度并移除可能的噪点
+    // 增强对比度
     for (let i = 0; i < data.length; i += 4) {
-      // 如果红色通道很低（<10），则完全清除像素，避免低强度噪点
-      if (data[i] < 10) {
+      // 如果透明度很低，则完全清除像素
+      if (data[i + 3] < 20) {
         data[i] = 0;     // R
         data[i + 1] = 0; // G
         data[i + 2] = 0; // B
@@ -321,21 +367,60 @@ class BikeHeatmapService {
       }
       // 否则增强对比度
       else if (data[i + 3] > 0) {
-        // 保持红色为主色调
-        data[i] = Math.min(255, data[i] * 1.2);    // 增强红色
-        data[i + 1] = Math.min(255, data[i + 1] * 0.8); // 降低绿色
-        data[i + 2] = Math.min(255, data[i + 2] * 0.8); // 降低蓝色
+        data[i] = Math.min(255, data[i] * 1.1);     // R
+        data[i + 1] = Math.min(255, data[i + 1] * 1.1); // G
+        data[i + 2] = Math.min(255, data[i + 2] * 1.1); // B
       }
     }
     
     // 将处理后的图像数据放回画布
     ctx.putImageData(imageData, 0, 0);
     
+    // 绘制颜色图例 (可选)
+    this.drawLegend(ctx, canvas.width, canvas.height);
+    
     // 创建材质
     return new Cesium.ImageMaterialProperty({
       image: canvas,
       transparent: true
     });
+  }
+  
+  /**
+   * 在画布上绘制颜色图例
+   * @param {CanvasRenderingContext2D} ctx 画布上下文
+   * @param {number} width 画布宽度
+   * @param {number} height 画布高度
+   */
+  drawLegend(ctx, width, height) {
+    const legendWidth = 150;
+    const legendHeight = 20;
+    const legendX = width - legendWidth - 10;
+    const legendY = height - legendHeight - 10;
+    
+    // 绘制图例背景
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillRect(legendX - 5, legendY - 25, legendWidth + 10, legendHeight + 30);
+    
+    // 绘制颜色条
+    const gradient = ctx.createLinearGradient(legendX, 0, legendX + legendWidth, 0);
+    gradient.addColorStop(0, 'rgba(0, 0, 255, 0.7)');    // 蓝色 - 非常低密度
+    gradient.addColorStop(0.25, 'rgba(0, 255, 255, 0.7)'); // 青色 - 低密度
+    gradient.addColorStop(0.5, 'rgba(0, 255, 0, 0.7)');   // 绿色 - 中等密度
+    gradient.addColorStop(0.75, 'rgba(255, 255, 0, 0.7)');  // 黄色 - 高密度
+    gradient.addColorStop(1, 'rgba(255, 0, 0, 0.7)');    // 红色 - 非常高密度
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(legendX, legendY, legendWidth, legendHeight);
+    
+    // 添加图例标题
+    ctx.fillStyle = 'black';
+    ctx.font = '12px Arial';
+    ctx.fillText('单车密度', legendX, legendY - 10);
+    
+    // 添加图例标签
+    ctx.fillText('低', legendX, legendY + legendHeight + 15);
+    ctx.fillText('高', legendX + legendWidth - 15, legendY + legendHeight + 15);
   }
   
   /**
