@@ -1,6 +1,6 @@
 <template>
    <!-- 应用标题 - 添加在顶部 -->
-  <div class="app-title">这是标题111</div>
+  <div class="app-title">校园单车智能管理系统</div>
   <!-- Cesium 的主容器 -->
   <div id="cesiumContainer"></div>
   
