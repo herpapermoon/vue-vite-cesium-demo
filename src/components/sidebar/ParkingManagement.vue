@@ -186,23 +186,30 @@
         </div>
       </div>
 
-      <div class="analysis-controls">
-        <button 
-          class="control-btn" 
-          @click="runAnalysis"
-          :disabled="isAnalyzing">
-          {{ isAnalyzing ? '分析中...' : '🔍 开始智能分析' }}
-        </button>
-        <div class="query-input">
-          <input 
-            type="text" 
-            v-model="userQuery" 
-            placeholder="输入分析需求，例如：分析哪些区域需要调配车位"
-            @keyup.enter="runAnalysis"
-            :disabled="isAnalyzing"
-          />
-        </div>
-      </div>
+      
+<div class="analysis-controls">
+  <button 
+    class="control-btn" 
+    @click="runAnalysis"
+    :disabled="isAnalyzing">
+    {{ isAnalyzing ? '分析中...' : '🔍 开始智能分析' }}
+  </button>
+  <button 
+    class="control-btn" 
+    :class="{ active: heatmapActive }"
+    @click="toggleHeatmap">
+    {{ heatmapActive ? '🔥 关闭热力图' : '🔥 生成实时单车热力图' }}
+  </button>
+  <div class="query-input">
+    <input 
+      type="text" 
+      v-model="userQuery" 
+      placeholder="输入分析需求，例如：分析哪些区域需要调配车位"
+      @keyup.enter="runAnalysis"
+      :disabled="isAnalyzing"
+    />
+  </div>
+</div>
 
       <div class="analysis-output" ref="outputContainer">
         <div v-if="analysisResults.length === 0 && !isAnalyzing" class="empty-state">
@@ -284,6 +291,7 @@ import bikeStore from '@/cesiumUtils/BikeStore';
 import { calculateDistance } from '@/cesiumUtils/randomPoints';
 import Cesium from '@/cesiumUtils/cesium';
 import ParkingAnalysisService from '@/cesiumUtils/ParkingAnalysisService';
+import BikeHeatmapService from '@/cesiumUtils/BikeHeatmapService';
 
 // 响应式状态
 const activeTab = ref('parking');
@@ -297,6 +305,9 @@ const isAnalyzing = ref(false);
 const userQuery = ref('');
 const analysisResults = ref([]);
 const outputContainer = ref(null);
+
+// 热力图状态
+const heatmapActive = ref(false);
 
 // 常量定义
 const PARKING_HEIGHT = 20;
@@ -730,6 +741,12 @@ const clearAnalysisEntities = () => {
 // 清理分析实体的方法
 const cleanup = () => {
   clearAnalysisEntities();
+  
+  // 关闭热力图
+  if (BikeHeatmapService.isActive) {
+    BikeHeatmapService.deactivate();
+    heatmapActive.value = false;
+  }
 };
 
 // 清理定时器
@@ -1146,6 +1163,51 @@ const refreshData = async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+// 添加热力图开关功能
+const toggleHeatmap = async () => {
+  if (!bikeStore.viewer) {
+    console.error('Cesium实例未初始化，无法使用热力图功能');
+    return;
+  }
+  
+  // 初始化热力图服务
+  if (!BikeHeatmapService.viewer) {
+    BikeHeatmapService.initialize(bikeStore.viewer);
+  }
+  
+  try {
+    // 切换热力图状态
+    const isActive = await BikeHeatmapService.toggle();
+    heatmapActive.value = isActive;
+    
+    if (isActive) {
+      console.log('热力图已激活');
+    } else {
+      console.log('热力图已关闭');
+    }
+  } catch (error) {
+    console.error('切换热力图状态失败:', error);
+    heatmapActive.value = BikeHeatmapService.isActive;
+  }
+};
+
+// 在generateHeatmap函数中添加热力图生成功能
+const generateHeatmap = async () => {
+  if (!bikeStore.viewer) {
+    console.error('Cesium实例未初始化，无法使用热力图功能');
+    return;
+  }
+  
+  // 初始化热力图服务
+  if (!BikeHeatmapService.viewer) {
+    BikeHeatmapService.initialize(bikeStore.viewer);
+  }
+  
+  // 激活热力图
+  const success = await BikeHeatmapService.activate();
+  heatmapActive.value = success;
 };
 
 defineExpose({
@@ -1766,6 +1828,12 @@ defineExpose({
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  /* 在<style>部分添加热力图按钮样式 */
+  .control-btn.active {
+    background: #e91e63;
+    color: white;
   }
 }
 </style>

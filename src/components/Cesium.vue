@@ -543,6 +543,21 @@ const btnClickHandler = (btn) => {
       break
     }
     
+    // 添加校园建筑按钮处理
+    case 'whiteBuild': {
+      caller(active, async () => {
+        // 调用白模建筑函数
+        await setWhiteBuild(viewer3D, true)
+        showNotification('模型加载', '校园建筑模型加载成功', 'info')
+      }, () => {
+        // 关闭白模建筑
+        setWhiteBuild(viewer3D, false)
+        back2Home()
+        showNotification('模型已清除', '已移除校园建筑模型', 'info')
+      })
+      break
+    }
+    
     // ...existing code for other cases...
     
     default: break

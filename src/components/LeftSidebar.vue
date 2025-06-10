@@ -53,6 +53,12 @@ import TripPlanner from './sidebar/TripPlanner.vue';
 import MetroStationQuery from './sidebar/MetroStationQuery.vue';
 import ParkingManagement from './sidebar/ParkingManagement.vue'; // 新增
 
+import NoParking from './sidebar/NoParking.vue';// 导入禁停区管理组件
+import AnomalyDetection from './sidebar/AnomalyDetection.vue';//导入异常检测组件
+import BikeScan from './sidebar/BikeScan.vue';//导入单车扫描组件
+import WeatherAdvisor from './sidebar/WeatherAdvisor.vue';
+import BikeNavigation from './sidebar/BikeNavigation.vue';
+
 // 状态管理
 const expanded = ref(true);
 const activeTab = ref('city');
@@ -69,8 +75,13 @@ const tabs = [
   { id: 'bikes', label: '单车数据', icon: '🚲', component: BikeStats },
   { id: 'bikeManage', label: '单车管理', icon: '🔧', component: BikeManagement },
   { id: 'parking', label: '车位车库', icon: '🅿️', component: ParkingManagement }, // 新增
+  { id: 'weather', label: '天气顾问', icon: '🌤️', component: WeatherAdvisor },
+  { id: 'bikeNav', label: '单车导航', icon: '🧭', component: BikeNavigation },
   { id: 'tripPlanner', label: '出行规划', icon: '🗺️', component: TripPlanner },
-  { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery }
+  { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery },
+  { id: 'noParking', label: '禁停区管理', icon: '🚫', component: NoParking }, // 新增禁停区管理
+  { id: 'anomalyDetection', label: '异常检测', icon: '⚠️', component: AnomalyDetection }, // 新增异常检测
+  { id: 'bikeScan', label: '单车扫描', icon: '🔍', component: BikeScan } // 新增单车扫描
   //{ id: 'resources', label: '资源管理', icon: '📦', component: Resources }
 ];
 
@@ -93,13 +104,27 @@ const showBikeStats = () => {
   expanded.value = true;
 };
 
+// 新增方法以便外部调用天气顾问
+const showWeatherAdvisor = () => {
+  activeTab.value = 'weather';
+  expanded.value = true;
+};
+
+// 新增方法以便外部调用单车导航
+const showBikeNavigation = () => {
+  activeTab.value = 'bikeNav';
+  expanded.value = true;
+};
+
 // 新增props用于视觉识别状态和控制
 const props = defineProps({
   visionActive: Boolean
 });
 
 defineExpose({
-  showBikeStats
+  showBikeStats,
+  showWeatherAdvisor,
+  showBikeNavigation
 });
 </script>
 
