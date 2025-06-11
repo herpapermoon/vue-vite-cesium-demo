@@ -35,6 +35,20 @@
     @camera-activated="onCameraActivated"
   />
   
+  <!-- 单车热点分析面板 -->
+  <BikeHeatmap
+    :visible="bikeHeatmapVisible"
+    :viewer="viewer3D"
+    @close="bikeHeatmapVisible = false"
+  />
+  
+  <!-- 高峰期分析与预测面板 -->
+  <PeakAnalysis
+    :visible="peakAnalysisVisible"
+    :viewer="viewer3D"
+    @close="peakAnalysisVisible = false"
+  />
+  
   <!-- 实时视频流容器，精简UI -->
   <div id="videoContainer" class="h5videodiv" v-show="videoShow" ref="videoContainerRef">
     <div class="video-header">
@@ -97,6 +111,8 @@ import LeftSidebar from '@/components/LeftSidebar.vue'
 import BottomToolbar from '@/components/BottomToolbar.vue'
 import Notifications from '@/components/Notifications.vue'
 import CameraSetup from '@/components/CameraSetup.vue'
+import BikeHeatmap from '@/components/BikeHeatmap.vue'
+import PeakAnalysis from '@/components/PeakAnalysis.vue'
 
 // 导入单车视觉识别模块
 import BikeDetection from '@/cesiumUtils/bikeDetection'
@@ -155,6 +171,8 @@ const detectedBikesCount = ref(0) // 检测到的单车数量
 const autoStartDetection = ref(true) // 是否自动启动检测
 const cameraSetupVisible = ref(false) // 控制摄像头设置面板的显示
 const activeCameraName = ref('') // 当前激活的摄像头名称
+const bikeHeatmapVisible = ref(false) // 控制单车热点分析面板的显示
+const peakAnalysisVisible = ref(false) // 控制高峰期分析面板的显示
 
 // 添加缺失的单车骑行相关状态变量
 const bikeMovementActive = ref(false) // 骑行模式是否激活
@@ -558,7 +576,31 @@ const btnClickHandler = (btn) => {
       break
     }
     
-    // ...existing code for other cases...
+    // 添加单车热点分析处理
+    case 'bikeHeatmap': {
+      caller(active, () => {
+        // 激活状态：显示热点分析面板
+        bikeHeatmapVisible.value = true
+        showNotification('单车分析', '单车热点分析已启动', 'info')
+      }, () => {
+        // 非激活状态：隐藏热点分析面板
+        bikeHeatmapVisible.value = false
+      })
+      break
+    }
+    
+    // 添加高峰期分析处理
+    case 'peakAnalysis': {
+      caller(active, () => {
+        // 激活状态：显示高峰期分析面板
+        peakAnalysisVisible.value = true
+        showNotification('单车分析', '高峰期用车分析与预测已启动', 'info')
+      }, () => {
+        // 非激活状态：隐藏高峰期分析面板
+        peakAnalysisVisible.value = false
+      })
+      break
+    }
     
     default: break
   }

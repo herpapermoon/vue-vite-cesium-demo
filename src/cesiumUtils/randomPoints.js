@@ -622,9 +622,9 @@ const updateBikeStates = () => {
           // 随机决定方向
           const direction = Math.random() > 0.5 ? 1 : -1;
           
-          // 更新状态
+          // 更新状态，使用随机历史时间
           bike.status = BikeStatus.RIDING;
-          bike.lastUpdated = now;
+          bike.lastUpdated = generateRandomTimeStamp(2); // 使用较短期间内的随机时间
           
           // 更新图标
           if (bike.billboard) {
@@ -660,9 +660,9 @@ const updateBikeStates = () => {
       if (Math.random() < STATE_TRANSITION.RIDING_TO_PARKED) {
         // 当前位置已经记录在bike.longitude和bike.latitude中
         
-        // 更新状态
+        // 更新状态，使用随机历史时间
         bike.status = BikeStatus.PARKED;
-        bike.lastUpdated = now;
+        bike.lastUpdated = generateRandomTimeStamp(2); // 使用较短期间内的随机时间
         
         // 更新图标
         if (bike.billboard) {
@@ -677,87 +677,16 @@ const updateBikeStates = () => {
 };
 
 /**
- * 生成随机点图元（测试用）
- * @param {Cesium.Viewer} viewer - Cesium视图对象
- * @param {number} count - 生成点的数量
+ * 为单车生成随机的历史时间戳
+ * @param {number} daysBack - 最多往前推算的天数
+ * @returns {number} 随机时间戳
  */
-export const randomGeneratePoints = async (viewer, count) => {
-  const posArr = await generatePos(count);
-  const points = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
-  
-  posArr.forEach(position => {
-    points.add({
-      pixelSize: 5,
-      color: Cesium.Color.BLUE,
-      position
-    });
-  });
-};
-
-/**
- * 生成动态扩散圆环效果
- * @param {Cesium.Viewer} viewer - Cesium视图对象
- * @param {Cesium.Cartesian3} position - 位置
- * @param {string} id - 唯一标识符
- * @param {number} startAlpha - 起始透明度
- * @param {number} maxSize - 最大尺寸
- * @param {number} speed - 扩散速度
- */
-export const setCircles = (viewer, position, id, startAlpha = 0.6, maxSize = 100, speed = 1) => {
-  const circles = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
-  let size = 1;
-  const circle = circles.add({ id: `circle${id}`, position });
-  
-  // 每帧更新圆环状态
-  viewer.scene.preUpdate.addEventListener(() => {
-    size += speed;
-    if (size >= maxSize) size = 1;
-    circle.pixelSize = size;
-    circle.color = Cesium.Color.GRAY.withAlpha(startAlpha - (startAlpha/maxSize)*size);
-  });
-};
-
-/**
- * 计算点集的边界盒子
- * @param {Array} positions - 位置点数组
- * @returns {Object} 包含边界信息的对象
- */
-const calculateBoundingSphere = (positions) => {
-  if (!positions || positions.length === 0) {
-    return null;
-  }
-  
-  // 创建一个包含所有点的包围球
-  return Cesium.BoundingSphere.fromPoints(positions);
-};
-
-/**
- * 自动调整摄像机位置以显示所有点
- * @param {Cesium.Viewer} viewer - Cesium视图对象
- * @param {Array} positions - 位置点数组
- */
-const flyToBikes = (viewer, positions) => {
-  if (!positions || positions.length === 0) {
-    return;
-  }
-  
-  // 计算包围球
-  const boundingSphere = calculateBoundingSphere(positions);
-  if (!boundingSphere) {
-    return;
-  }
-  
-  // 增加视口距离，以更好地观察
-  const padding = boundingSphere.radius * 0.3;
-  
-  // 飞向包围球
-  viewer.camera.flyToBoundingSphere(boundingSphere, {
-    duration: 2.0, // 飞行时间（秒）
-    offset: new Cesium.HeadingPitchRange(0, -Cesium.Math.PI_OVER_FOUR, boundingSphere.radius + padding),
-    complete: () => {
-      console.log('摄像头已调整到校园单车分布区域');
-    }
-  });
+const generateRandomTimeStamp = (daysBack = 7) => {
+  const now = Date.now();
+  // 计算过去daysBack天内的随机时间
+  const randomOffset = Math.random() * daysBack * 24 * 60 * 60 * 1000;
+  // 生成在过去daysBack天内的随机时间戳
+  return now - randomOffset;
 };
 
 /**
@@ -805,6 +734,9 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
     const lon = Cesium.Math.toDegrees(cartographic.longitude);
     const lat = Cesium.Math.toDegrees(cartographic.latitude);
     
+    // 生成随机时间戳，分布在过去7天内
+    const randomTimestamp = generateRandomTimeStamp(7);
+    
     // 创建单车数据
     const bikeInfo = {
       id: `random-bike-${i}`,
@@ -813,7 +745,8 @@ export const randomGenerateBillboards = async (viewer, count, imgIndex) => {
       height: BIKE_HEIGHT,
       status: BikeStatus.PARKED,
       source: 'random',
-      modelType: `Model-${String.fromCharCode(65 + Math.floor(Math.random() * 5))}` // 随机型号A-E
+      modelType: `Model-${String.fromCharCode(65 + Math.floor(Math.random() * 5))}`, // 随机型号A-E
+      lastUpdated: randomTimestamp // 使用随机时间戳
     };
     
     // 使用BikeStore创建实体
@@ -892,7 +825,9 @@ export const updateBikeStatus = (id, status) => {
   if (bike) {
     const oldStatus = bike.status;
     bike.status = status;
-    bike.lastUpdated = Date.now();
+    
+    // 生成随机历史时间戳，而不是使用当前时间
+    bike.lastUpdated = generateRandomTimeStamp(3); // 使用较短期间(3天)内的随机时间
     
     // 更新图标
     if (bike.billboard) {
@@ -1008,5 +943,89 @@ export const focusOnBikes = (viewer) => {
   
   // 飞向单车分布区域
   flyToBikes(viewer, positions);
+};
+
+/**
+ * 生成随机点图元（测试用）
+ * @param {Cesium.Viewer} viewer - Cesium视图对象
+ * @param {number} count - 生成点的数量
+ */
+export const randomGeneratePoints = async (viewer, count) => {
+  const posArr = await generatePos(count);
+  const points = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+  
+  posArr.forEach(position => {
+    points.add({
+      pixelSize: 5,
+      color: Cesium.Color.BLUE,
+      position
+    });
+  });
+};
+
+/**
+ * 生成动态扩散圆环效果
+ * @param {Cesium.Viewer} viewer - Cesium视图对象
+ * @param {Cesium.Cartesian3} position - 位置
+ * @param {string} id - 唯一标识符
+ * @param {number} startAlpha - 起始透明度
+ * @param {number} maxSize - 最大尺寸
+ * @param {number} speed - 扩散速度
+ */
+export const setCircles = (viewer, position, id, startAlpha = 0.6, maxSize = 100, speed = 1) => {
+  const circles = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+  let size = 1;
+  const circle = circles.add({ id: `circle${id}`, position });
+  
+  // 每帧更新圆环状态
+  viewer.scene.preUpdate.addEventListener(() => {
+    size += speed;
+    if (size >= maxSize) size = 1;
+    circle.pixelSize = size;
+    circle.color = Cesium.Color.GRAY.withAlpha(startAlpha - (startAlpha/maxSize)*size);
+  });
+};
+
+/**
+ * 计算点集的边界盒子
+ * @param {Array} positions - 位置点数组
+ * @returns {Object} 包含边界信息的对象
+ */
+const calculateBoundingSphere = (positions) => {
+  if (!positions || positions.length === 0) {
+    return null;
+  }
+  
+  // 创建一个包含所有点的包围球
+  return Cesium.BoundingSphere.fromPoints(positions);
+};
+
+/**
+ * 自动调整摄像机位置以显示所有点
+ * @param {Cesium.Viewer} viewer - Cesium视图对象
+ * @param {Array} positions - 位置点数组
+ */
+const flyToBikes = (viewer, positions) => {
+  if (!positions || positions.length === 0) {
+    return;
+  }
+  
+  // 计算包围球
+  const boundingSphere = calculateBoundingSphere(positions);
+  if (!boundingSphere) {
+    return;
+  }
+  
+  // 增加视口距离，以更好地观察
+  const padding = boundingSphere.radius * 0.3;
+  
+  // 飞向包围球
+  viewer.camera.flyToBoundingSphere(boundingSphere, {
+    duration: 2.0, // 飞行时间（秒）
+    offset: new Cesium.HeadingPitchRange(0, -Cesium.Math.PI_OVER_FOUR, boundingSphere.radius + padding),
+    complete: () => {
+      console.log('摄像头已调整到校园单车分布区域');
+    }
+  });
 };
 
