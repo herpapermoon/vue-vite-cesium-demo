@@ -28,6 +28,10 @@ class BikeStore {
       }
     };
     
+    // 热点分析相关数据
+    this.hotspots = []; // 存储识别的热点数据
+    this.timeDistribution = Array(24).fill(0); // 按小时存储时段分布
+    
     // 实体管理
     this.entityMap = new Map(); // 存储所有单车相关的实体引用
     this.billboardCollections = new Map(); // 存储图标集合
@@ -136,18 +140,20 @@ class BikeStore {
     // 检查是否已存在
     const existingIndex = this.bikes.findIndex(bike => bike.id === bikeData.id);
     if (existingIndex !== -1) {
-      // 更新现有数据
-      this.bikes[existingIndex] = {
+      // 更新现有数据，保留原有的时间戳除非明确提供新值
+      const updatedBike = {
         ...this.bikes[existingIndex],
         ...bikeData,
-        lastUpdated: Date.now()
+        // 如果传入了lastUpdated就使用它，否则保留原来的，若两者都没有才使用当前时间
+        lastUpdated: bikeData.lastUpdated || this.bikes[existingIndex].lastUpdated || Date.now()
       };
-      return this.bikes[existingIndex];
+      this.bikes[existingIndex] = updatedBike;
+      return updatedBike;
     } else {
-      // 添加新数据
+      // 添加新数据，使用提供的时间戳或当前时间
       const newBike = {
         ...bikeData,
-        lastUpdated: Date.now()
+        lastUpdated: bikeData.lastUpdated || Date.now()
       };
       this.bikes.push(newBike);
       return newBike;
@@ -390,10 +396,11 @@ class BikeStore {
   updateBike(id, updates) {
     const index = this.bikes.findIndex(bike => bike.id === id);
     if (index !== -1) {
+      // 保留原有的时间戳除非明确提供新值
       this.bikes[index] = {
         ...this.bikes[index],
         ...updates,
-        lastUpdated: Date.now()
+        lastUpdated: updates.lastUpdated || this.bikes[index].lastUpdated || Date.now()
       };
       return true;
     }
@@ -838,6 +845,229 @@ class BikeStore {
     if (this.detectionStats.history.length > 100) {
       this.detectionStats.history.shift();
     }
+  }
+
+  /**
+   * 识别热点区域
+   * @param {number} clusterRadius - 聚类半径（米）
+   * @param {string} timeRange - 时间范围（'today', 'week', 'month', 'all'）
+   * @param {string} bikeType - 单车类型（'parked', 'riding', 'all'）
+   * @returns {Array} 热点数据数组
+   */
+  identifyHotspots(clusterRadius = 50, timeRange = 'all', bikeType = 'all') {
+    // 根据时间范围和类型过滤单车
+    const filteredBikes = this.filterBikesByTimeAndType(timeRange, bikeType);
+    
+    if (filteredBikes.length === 0) {
+      return [];
+    }
+    
+    // 使用基于距离的简单聚类算法
+    const clusters = [];
+    const processedBikes = new Set();
+    
+    for (const bike of filteredBikes) {
+      if (processedBikes.has(bike.id)) continue;
+      
+      // 创建新的聚类
+      const cluster = {
+        bikes: [bike],
+        center: {
+          longitude: bike.longitude,
+          latitude: bike.latitude
+        }
+      };
+      
+      processedBikes.add(bike.id);
+      
+      // 找出所有在聚类半径内的单车
+      for (const otherBike of filteredBikes) {
+        if (processedBikes.has(otherBike.id)) continue;
+        
+        const distance = calculateDistance(
+          [cluster.center.longitude, cluster.center.latitude],
+          [otherBike.longitude, otherBike.latitude]
+        );
+        
+        if (distance <= clusterRadius) {
+          cluster.bikes.push(otherBike);
+          processedBikes.add(otherBike.id);
+          
+          // 更新聚类中心
+          cluster.center = {
+            longitude: cluster.bikes.reduce((sum, b) => sum + b.longitude, 0) / cluster.bikes.length,
+            latitude: cluster.bikes.reduce((sum, b) => sum + b.latitude, 0) / cluster.bikes.length
+          };
+        }
+      }
+      
+      clusters.push(cluster);
+    }
+    
+    // 转换为热点数据格式
+    const hotspots = clusters.map(cluster => ({
+      location: cluster.center,
+      density: cluster.bikes.length,
+      bikes: cluster.bikes.map(bike => bike.id),
+      radius: clusterRadius
+    }));
+    
+    // 保存热点分析结果
+    this.hotspots = hotspots;
+    
+    return hotspots;
+  }
+  
+  /**
+   * 根据时间范围和类型过滤单车
+   * @param {string} timeRange - 时间范围（'today', 'week', 'month', 'all'）
+   * @param {string} bikeType - 单车类型（'parked', 'riding', 'all'）
+   * @returns {Array} 过滤后的单车数组
+   */
+  filterBikesByTimeAndType(timeRange = 'all', bikeType = 'all') {
+    // 首先按照时间过滤
+    let filteredBikes = [...this.bikes];
+    const now = Date.now();
+    
+    if (timeRange === 'today') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      filteredBikes = filteredBikes.filter(bike => bike.lastUpdated >= todayStart.getTime());
+    } else if (timeRange === 'week') {
+      const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+      filteredBikes = filteredBikes.filter(bike => bike.lastUpdated >= weekAgo);
+    } else if (timeRange === 'month') {
+      const monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+      filteredBikes = filteredBikes.filter(bike => bike.lastUpdated >= monthAgo);
+    }
+    
+    // 然后按照类型过滤
+    if (bikeType === 'parked') {
+      filteredBikes = filteredBikes.filter(bike => bike.status === 'parked');
+    } else if (bikeType === 'riding') {
+      filteredBikes = filteredBikes.filter(bike => bike.status === 'riding');
+    }
+    
+    return filteredBikes;
+  }
+  
+  /**
+   * 分析时段分布
+   * @param {string} timeRange - 时间范围（'today', 'week', 'month', 'all'）
+   * @param {string} bikeType - 单车类型（'parked', 'riding', 'all'）
+   * @returns {Array} 按小时统计的分布数组
+   */
+  analyzeTimeDistribution(timeRange = 'all', bikeType = 'all') {
+    const filteredBikes = this.filterBikesByTimeAndType(timeRange, bikeType);
+    const hourDistribution = Array(24).fill(0);
+    
+    // 统计每小时的单车数量
+    filteredBikes.forEach(bike => {
+      if (bike.lastUpdated) {
+        const hour = new Date(bike.lastUpdated).getHours();
+        hourDistribution[hour]++;
+      }
+    });
+    
+    // 同时分析行程时间分布
+    if (bikeType !== 'parked') {
+      // 获取符合时间范围的行程
+      let filteredTrips = [...this.trips];
+      const now = Date.now();
+      
+      if (timeRange === 'today') {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        filteredTrips = filteredTrips.filter(trip => trip.startTime >= todayStart.getTime());
+      } else if (timeRange === 'week') {
+        const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+        filteredTrips = filteredTrips.filter(trip => trip.startTime >= weekAgo);
+      } else if (timeRange === 'month') {
+        const monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+        filteredTrips = filteredTrips.filter(trip => trip.startTime >= monthAgo);
+      }
+      
+      // 统计行程开始时间分布
+      filteredTrips.forEach(trip => {
+        if (trip.startTime) {
+          const hour = new Date(trip.startTime).getHours();
+          hourDistribution[hour]++;
+        }
+      });
+    }
+    
+    // 保存时段分布结果
+    this.timeDistribution = hourDistribution;
+    
+    return hourDistribution;
+  }
+  
+  /**
+   * 获取热点分析结果
+   * @returns {Object} 热点分析结果
+   */
+  getHotspotAnalysis() {
+    return {
+      hotspots: this.hotspots,
+      timeDistribution: this.timeDistribution
+    };
+  }
+  
+  /**
+   * 导出热点分析数据
+   * @returns {string} JSON格式的热点分析数据
+   */
+  exportHotspotData() {
+    const hotspotData = {
+      timestamp: Date.now(),
+      hotspots: this.hotspots,
+      timeDistribution: this.timeDistribution,
+      bikeCount: this.bikes.length
+    };
+    
+    return JSON.stringify(hotspotData);
+  }
+  
+  /**
+   * 计算区域内的单车数量
+   * @param {number} longitude - 中心点经度
+   * @param {number} latitude - 中心点纬度
+   * @param {number} radiusInMeters - 半径（米）
+   * @returns {Object} 区域统计结果
+   */
+  getBikeStatsInArea(longitude, latitude, radiusInMeters = 100) {
+    // 获取区域内的所有单车
+    const bikesInArea = this.getBikesInRadius(longitude, latitude, radiusInMeters);
+    
+    // 按状态统计
+    const parkedCount = bikesInArea.filter(bike => bike.status === 'parked').length;
+    const ridingCount = bikesInArea.filter(bike => bike.status === 'riding').length;
+    
+    // 分析最近一天的变化趋势
+    const now = Date.now();
+    const dayAgo = now - (24 * 60 * 60 * 1000);
+    
+    // 分成4个6小时时段
+    const timeSlots = [
+      { start: dayAgo, end: dayAgo + 6 * 60 * 60 * 1000 },
+      { start: dayAgo + 6 * 60 * 60 * 1000, end: dayAgo + 12 * 60 * 60 * 1000 },
+      { start: dayAgo + 12 * 60 * 60 * 1000, end: dayAgo + 18 * 60 * 60 * 1000 },
+      { start: dayAgo + 18 * 60 * 60 * 1000, end: now }
+    ];
+    
+    const timeTrend = timeSlots.map(slot => {
+      const bikesInSlot = bikesInArea.filter(bike => 
+        bike.lastUpdated >= slot.start && bike.lastUpdated < slot.end
+      );
+      return bikesInSlot.length;
+    });
+    
+    return {
+      total: bikesInArea.length,
+      parked: parkedCount,
+      riding: ridingCount,
+      timeTrend
+    };
   }
 }
 

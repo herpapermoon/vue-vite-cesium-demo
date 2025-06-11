@@ -97,7 +97,19 @@ const categories = [
        },
     ]
   },
-
+  {
+    label: '数据分析',
+    icon: '📊',
+    subcategories: [
+      {
+        label: '热点分析',
+        tools: [
+          { id: 'bikeHeatmap', label: '单车热点分析', icon: '🔥' },
+          { id: 'peakAnalysis', label: '高峰期分析预测', icon: '📊' },
+        ]
+      },
+    ]
+  },
 ];
 
 // 状态管理
