@@ -250,6 +250,7 @@ const initializeService = async () => {
 }
 
 // 新增加载GeoJSON违规数据的方法
+// 修改加载GeoJSON违规数据的方法
 const loadViolationsFromGeoJSON = async () => {
   try {
     const response = await fetch('/data/violations.geojson')
@@ -259,9 +260,9 @@ const loadViolationsFromGeoJSON = async () => {
     
     const geoJsonData = await response.json()
     
-    // 转换GeoJSON数据为内部格式
-    const violations = geoJsonData.features.map(feature => ({
-      id: feature.properties.id,
+    // 转换GeoJSON数据为内部格式，并确保每个记录都有唯一ID
+    const violations = geoJsonData.features.map((feature, index) => ({
+      id: feature.properties.id || `violation_${Date.now()}_${index}`, // 确保ID唯一
       bikeId: feature.properties.bikeId,
       type: feature.properties.type,
       status: feature.properties.status,
@@ -269,17 +270,36 @@ const loadViolationsFromGeoJSON = async () => {
       coordinates: feature.geometry.coordinates,
       detectedTime: feature.properties.detectedTime,
       distanceFromParkingArea: feature.properties.distanceFromParkingArea,
-      nearestParkingArea: { name: feature.properties.nearestParkingArea },
-      adminNotes: feature.properties.adminNotes,
+      nearestParkingArea: { name: feature.properties.nearestParkingArea || '未知停车区' },
+      adminNotes: feature.properties.adminNotes || '',
       resolvedTime: feature.properties.resolvedTime,
       processedBy: feature.properties.processedBy
     }))
     
+    // 如果存在ID重复，生成唯一ID
+    const uniqueViolations = []
+    const seenIds = new Set()
+    
+    violations.forEach((violation, index) => {
+      let uniqueId = violation.id
+      
+      // 如果ID已存在，生成新的唯一ID
+      if (seenIds.has(uniqueId)) {
+        uniqueId = `${violation.bikeId}_${Date.now()}_${index}`
+      }
+      
+      seenIds.add(uniqueId)
+      uniqueViolations.push({
+        ...violation,
+        id: uniqueId
+      })
+    })
+    
     // 更新数据
-    dashboardData.recentViolations = violations
+    dashboardData.recentViolations = uniqueViolations
     
     // 生成相应的通知
-    recentNotifications.value = violations
+    recentNotifications.value = uniqueViolations
       .filter(v => v.status !== 'resolved')
       .map(v => ({
         id: `notify_${v.id}`,
@@ -291,11 +311,156 @@ const loadViolationsFromGeoJSON = async () => {
     // 更新统计数据
     updateStatistics()
     
-    console.log(`已加载 ${violations.length} 条违规记录`)
+    console.log(`已加载 ${uniqueViolations.length} 条违规记录`)
+    console.log('违规记录详情:', uniqueViolations)
     
   } catch (error) {
     console.error('加载违规数据失败:', error)
     throw error
+  }
+}
+
+// 改进显示违规点函数
+const displayViolationsOnMap = () => {
+  const viewer = getCesiumViewer()
+  if (!viewer) {
+    console.error('地图未初始化')
+    showNotification('地图未初始化', 'error')
+    return
+  }
+
+  console.log('在地图上显示违规车辆，总数:', dashboardData.recentViolations.length)
+  
+  // 只显示未解决的违规（pending和processing状态）
+  const activeViolations = dashboardData.recentViolations
+    .filter(v => v.status === 'pending' || v.status === 'processing')
+  
+  console.log('活跃违规数量:', activeViolations.length)
+  console.log('活跃违规详情:', activeViolations)
+  
+  // 清除已解决的违规点
+  const resolvedViolations = dashboardData.recentViolations
+    .filter(v => v.status === 'resolved')
+  
+  resolvedViolations.forEach(violation => {
+    removeViolationFromMap(violation.id)
+  })
+  
+  if (activeViolations.length === 0) {
+    showNotification('没有待处理的违规记录', 'info')
+    return
+  }
+  
+  // 先清除所有现有的违规点，避免重复
+  clearViolationEntities()
+  
+  // 添加所有活跃违规点到地图
+  let addedCount = 0
+  activeViolations.forEach((violation, index) => {
+    // 验证坐标数据
+    if (violation.coordinates && Array.isArray(violation.coordinates) && violation.coordinates.length >= 2) {
+      setTimeout(() => {
+        const success = addViolationToMap(violation)
+        if (success) {
+          addedCount++
+          console.log(`已添加违规点 ${addedCount}/${activeViolations.length}: ${violation.bikeId}`)
+        }
+      }, index * 50) // 分批添加，避免性能问题
+    } else {
+      console.warn(`违规记录 ${violation.id} 缺少有效坐标:`, violation.coordinates)
+    }
+  })
+  
+  // 飞行到第一个违规位置
+  if (activeViolations.length > 0) {
+    const firstViolation = activeViolations[0]
+    if (firstViolation.coordinates && firstViolation.coordinates.length >= 2) {
+      const [lon, lat] = firstViolation.coordinates
+      setTimeout(() => {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1000), // 提高高度以便看到更多点
+          duration: 3.0
+        })
+        console.log(`飞行到违规位置: ${lon}, ${lat}`)
+      }, 1000)
+    }
+  }
+  
+  setTimeout(() => {
+    showNotification(`已显示 ${addedCount} 个违规点`, 'success')
+  }, activeViolations.length * 50 + 500)
+}
+
+// 改进添加违规点到地图的函数
+const addViolationToMap = (violation) => {
+  const viewer = getCesiumViewer()
+  if (!viewer || !violation.coordinates) {
+    console.warn('Viewer 或坐标信息缺失')
+    return false
+  }
+
+  try {
+    const entityId = `violation_${violation.id}`
+    
+    // 检查实体是否已存在，如果存在则先移除
+    const existingEntity = viewer.entities.getById(entityId)
+    if (existingEntity) {
+      viewer.entities.remove(existingEntity)
+      violationEntities.delete(violation.id)
+      console.log(`移除已存在的违规实体: ${entityId}`)
+    }
+
+    const [lon, lat, height = 20] = violation.coordinates
+    
+    // 验证坐标有效性
+    if (isNaN(lon) || isNaN(lat) || lon === 0 || lat === 0) {
+      console.error('无效的坐标:', violation.coordinates)
+      return false
+    }
+    
+    const position = Cesium.Cartesian3.fromDegrees(lon, lat, height)
+    
+    const color = violation.status === 'pending' ? 
+      Cesium.Color.RED : 
+      Cesium.Color.ORANGE
+
+    const violationEntity = viewer.entities.add({
+      id: entityId,
+      name: `违规-${violation.bikeId}`,
+      position: position,
+      point: {
+        pixelSize: 10,
+        color: color,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        scaleByDistance: new Cesium.NearFarScalar(1.0e2, 2.0, 1.0e6, 0.5),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY // 确保点始终可见
+      },
+      label: {
+        text: `🚲 ${violation.bikeId}\n${violation.type}`,
+        font: '14pt sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cesium.Cartesian2(0, -50),
+        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        showBackground: true,
+        backgroundColor: Cesium.Color.fromCssColorString('rgba(0, 0, 0, 0.8)'),
+        backgroundPadding: new Cesium.Cartesian2(10, 6),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    })
+
+    violationEntities.set(violation.id, violationEntity)
+    console.log(`已添加违规点到地图: ${violation.bikeId} at ${lon}, ${lat}`)
+    return true
+
+  } catch (error) {
+    console.error('添加违规点到地图失败:', error)
+    return false
   }
 }
 
@@ -641,63 +806,7 @@ const toggleVisualization = () => {
   }
 }
 
-const displayViolationsOnMap = () => {
-  const viewer = getCesiumViewer()
-  if (!viewer) {
-    console.error('地图未初始化')
-    showNotification('地图未初始化', 'error')
-    return
-  }
 
-  console.log('在地图上显示违规车辆，总数:', dashboardData.recentViolations.length)
-  
-  // 只显示未解决的违规（pending和processing状态）
-  const activeViolations = dashboardData.recentViolations
-    .filter(v => v.status === 'pending' || v.status === 'processing')
-  
-  console.log('活跃违规数量:', activeViolations.length)
-  
-  // 清除已解决的违规点
-  const resolvedViolations = dashboardData.recentViolations
-    .filter(v => v.status === 'resolved')
-  
-  resolvedViolations.forEach(violation => {
-    removeViolationFromMap(violation.id)
-  })
-  
-  if (activeViolations.length === 0) {
-    showNotification('没有待处理的违规记录', 'info')
-    return
-  }
-  
-  // 添加所有活跃违规点到地图
-  activeViolations.forEach((violation, index) => {
-    // 检查是否已存在
-    if (!violationEntities.has(violation.id)) {
-      // 添加延迟以确保所有实体都能正确添加
-      setTimeout(() => {
-        addViolationToMap(violation)
-      }, index * 50)
-    }
-  })
-  
-  // 飞行到第一个违规位置（只在首次显示时）
-  if (activeViolations.length > 0) {
-    const firstViolation = activeViolations[0]
-    if (firstViolation.coordinates) {
-      const [lon, lat] = firstViolation.coordinates
-      setTimeout(() => {
-        viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(lon, lat, 800),
-          duration: 3.0
-        })
-        console.log(`飞行到违规位置: ${lon}, ${lat}`)
-      }, 1000)
-    }
-  }
-  
-  showNotification(`已显示 ${activeViolations.length} 个违规点`, 'success')
-}
 
 const hideViolationsFromMap = () => {
   const viewer = getCesiumViewer()
@@ -713,74 +822,6 @@ const hideViolationsFromMap = () => {
 
 
 
-// 改进 addViolationToMap 函数
-const addViolationToMap = (violation) => {
-  const viewer = getCesiumViewer()
-  if (!viewer || !violation.coordinates) {
-    console.warn('Viewer 或坐标信息缺失')
-    return
-  }
-
-  try {
-    const entityId = `violation_${violation.id}`
-    
-    // 检查实体是否已存在，如果存在则先移除
-    const existingEntity = viewer.entities.getById(entityId)
-    if (existingEntity) {
-      viewer.entities.remove(existingEntity)
-      violationEntities.delete(violation.id)
-      console.log(`移除已存在的违规实体: ${entityId}`)
-    }
-
-    const [lon, lat, height = 10] = violation.coordinates
-    
-    // 验证坐标有效性
-    if (isNaN(lon) || isNaN(lat)) {
-      console.error('无效的坐标:', violation.coordinates)
-      return
-    }
-    
-    const position = Cesium.Cartesian3.fromDegrees(lon, lat, height)
-    
-    const color = violation.status === 'pending' ? 
-      Cesium.Color.RED : 
-      Cesium.Color.ORANGE
-
-    const violationEntity = viewer.entities.add({
-      id: entityId,
-      name: `违规-${violation.bikeId}`,
-      position: position,
-      point: {
-        pixelSize: 8,
-        color: color,
-        outlineColor: Cesium.Color.WHITE,
-        outlineWidth: 2,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-        scaleByDistance: new Cesium.NearFarScalar(1.0e2, 1.5, 1.0e6, 0.5)
-      },
-      label: {
-        text: `🚲 ${violation.bikeId}\n${violation.type}`,
-        font: '12pt sans-serif',
-        fillColor: Cesium.Color.WHITE,
-        outlineColor: Cesium.Color.BLACK,
-        outlineWidth: 1,
-        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-        pixelOffset: new Cesium.Cartesian2(0, -40),
-        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-        showBackground: true,
-        backgroundColor: Cesium.Color.fromCssColorString('rgba(0, 0, 0, 0.7)'),
-        backgroundPadding: new Cesium.Cartesian2(8, 4)
-      }
-    })
-
-    violationEntities.set(violation.id, violationEntity)
-    console.log(`已添加违规点到地图: ${violation.bikeId} at ${lon}, ${lat}`)
-
-  } catch (error) {
-    console.error('添加违规点到地图失败:', error)
-  }
-}
 
 const clearViolationEntities = () => {
   const viewer = getCesiumViewer()

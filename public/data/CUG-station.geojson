@@ -1,93 +1,3472 @@
 {
   "type": "FeatureCollection",
   "name": "停车区数据",
-  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
   "features": [
-    { "type": "Feature", "properties": { "id": "parking-001", "name": "停车区 6", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.609812479082279, 30.458899941881899 ], [ 114.609947680793425, 30.458845851452185 ], [ 114.609939855546216, 30.458827750352963 ], [ 114.609804681047223, 30.458886614967923 ], [ 114.609812479082279, 30.458899941881899 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-002", "name": "停车区 7", "isNoParking": true, "noParkingReason": "道路维修", "noParkingDate": "2025-06-05T10:20:00.000Z", "noParkingStartTime": "2025-06-10T08:00:00.000Z", "noParkingEndTime": "2025-06-20T18:00:00.000Z" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.609686745363675, 30.458656589919283 ], [ 114.609686434797595, 30.458655192437362 ], [ 114.609683146832353, 30.458658071183809 ], [ 114.609686745363675, 30.458656589919283 ] ] ], [ [ [ 114.609689835060266, 30.458670450299849 ], [ 114.609825050946114, 30.458618267017027 ], [ 114.6098073487167, 30.45860689568438 ], [ 114.609686745363675, 30.458656589919283 ], [ 114.609689835060266, 30.458670450299849 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-003", "name": "停车区 8", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.609612699245574, 30.459236699871713 ], [ 114.610305207536129, 30.458960436802041 ], [ 114.610296292179513, 30.458944250112342 ], [ 114.609608177298753, 30.459218583318194 ], [ 114.609612699245574, 30.459236699871713 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-004", "name": "停车区 9", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610415041173226, 30.458879674520748 ], [ 114.610539389993036, 30.458830169092021 ], [ 114.610530330647876, 30.458812908980089 ], [ 114.610407394877271, 30.458868375689342 ], [ 114.610415041173226, 30.458879674520748 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-005", "name": "停车区 10", "isNoParking": true, "noParkingReason": "消防通道", "noParkingDate": "2025-06-05T11:00:00.000Z", "noParkingStartTime": "2025-06-05T11:00:00.000Z", "noParkingEndTime": "2025-12-31T23:59:59.000Z" }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610606020617425, 30.458801815287782 ], [ 114.610750956341505, 30.458740278055469 ], [ 114.610740532857278, 30.45872541205485 ], [ 114.61059628781986, 30.458787541181469 ], [ 114.610606020617425, 30.458801815287782 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-006", "name": "停车区 11", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.61077971775147, 30.458540865635918 ], [ 114.610800356921871, 30.45853718882152 ], [ 114.610628970949946, 30.458222961901352 ], [ 114.610602830923995, 30.458227858563937 ], [ 114.61077971775147, 30.458540865635918 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-007", "name": "停车区 12", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.611044780493231, 30.458548024671291 ], [ 114.611064543102032, 30.458536475833654 ], [ 114.610962556281521, 30.458350800670747 ], [ 114.610941122301213, 30.458359493388038 ], [ 114.611044780493231, 30.458548024671291 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-008", "name": "停车区 13", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610923315742326, 30.458331413675026 ], [ 114.610938689127693, 30.458322750992604 ], [ 114.610837253101238, 30.458137073142385 ], [ 114.610818562049019, 30.458143842057765 ], [ 114.610923315742326, 30.458331413675026 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-009", "name": "停车区 14", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.611322708541991, 30.458538209613948 ], [ 114.611535771057504, 30.458468002170459 ], [ 114.611527364982678, 30.458445367405297 ], [ 114.611308821397998, 30.458520374837249 ], [ 114.611322708541991, 30.458538209613948 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-010", "name": "停车区 15", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.611603270698993, 30.458468878239263 ], [ 114.611882830723161, 30.458459212897242 ], [ 114.611885501620691, 30.458446075395113 ], [ 114.611611341368487, 30.458437813930779 ], [ 114.611609949375193, 30.458435434947866 ], [ 114.611603270698993, 30.458468878239263 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-011", "name": "停车区 16", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.6115660991168, 30.458151462746343 ], [ 114.611892680135639, 30.458172603995521 ], [ 114.611892665214839, 30.458170216354862 ], [ 114.611889909765594, 30.458170229277979 ], [ 114.611899389154502, 30.45814393321514 ], [ 114.611563208879616, 30.458129996807649 ], [ 114.6115660991168, 30.458151462746343 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-012", "name": "停车区 17", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612106243747505, 30.458182341667829 ], [ 114.612395612893451, 30.458200076047046 ], [ 114.612362323783103, 30.458163240677639 ], [ 114.612107426248883, 30.458151309645764 ], [ 114.612106243747505, 30.458182341667829 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-013", "name": "停车区 18", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.611438811333784, 30.457907076478282 ], [ 114.611750612136802, 30.457811106198967 ], [ 114.611735558549171, 30.457782537466354 ], [ 114.611430421736515, 30.457887068824729 ], [ 114.611438811333784, 30.457907076478282 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-014", "name": "停车区 19", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612059240818539, 30.457736630097411 ], [ 114.612402730456466, 30.457686331957035 ], [ 114.612399201446038, 30.457650549927965 ], [ 114.612057464539106, 30.457716591459654 ], [ 114.612059240818539, 30.457736630097411 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-015", "name": "停车区 20", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612105177358998, 30.45847785736872 ], [ 114.612689221030635, 30.458508595055381 ], [ 114.612687769911815, 30.458496669924859 ], [ 114.612102584846212, 30.458459612933506 ], [ 114.612105177358998, 30.45847785736872 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-016", "name": "停车区 21", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.61276591475098, 30.458425528257436 ], [ 114.612788213757298, 30.458423274197983 ], [ 114.612797298326456, 30.458290060932011 ], [ 114.612775806274016, 30.458289445619879 ], [ 114.61276591475098, 30.458425528257436 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-017", "name": "停车区 22", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612920547574561, 30.458439119347386 ], [ 114.612944527652047, 30.45844115601297 ], [ 114.612956776301601, 30.458285731580826 ], [ 114.612936103961985, 30.458283681579434 ], [ 114.612920547574561, 30.458439119347386 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-018", "name": "停车区 23", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612975046311931, 30.458431705678908 ], [ 114.612998199610814, 30.458433744016961 ], [ 114.613004724834312, 30.458287655624922 ], [ 114.612984897206545, 30.458289179649341 ], [ 114.612975046311931, 30.458431705678908 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-019", "name": "停车区 24", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612902804798566, 30.458245175495936 ], [ 114.613130979114331, 30.4582569905225 ], [ 114.613133347953791, 30.458239079545351 ], [ 114.612902688274247, 30.458226559940172 ], [ 114.612902804798566, 30.458245175495936 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-020", "name": "停车区 25", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612882826718902, 30.458222357347111 ], [ 114.612902688274247, 30.458226559940172 ], [ 114.612914208175994, 30.458086891653 ], [ 114.612891895796437, 30.458086996471437 ], [ 114.612882826718902, 30.458222357347111 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-021", "name": "停车区 26", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612855387232443, 30.458069778480972 ], [ 114.612880150643605, 30.458064887835064 ], [ 114.612887623373666, 30.457938365185644 ], [ 114.612865563786272, 30.457934889172876 ], [ 114.612855387232443, 30.458069778480972 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-022", "name": "停车区 27", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613350377154944, 30.458456582536289 ], [ 114.613368555133007, 30.458455782469745 ], [ 114.613379210430764, 30.458309672995721 ], [ 114.61335359480222, 30.458310509681603 ], [ 114.613350377154944, 30.458456582536289 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-023", "name": "停车区 28", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613394288039871, 30.458473559128727 ], [ 114.61341825852088, 30.458474162685622 ], [ 114.613427156435307, 30.458311596345716 ], [ 114.613407317901746, 30.458310973363155 ], [ 114.613394288039871, 30.458473559128727 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-024", "name": "停车区 29", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613240913199419, 30.458265217030217 ], [ 114.613471581977421, 30.458279168509346 ], [ 114.613468160201705, 30.458260568496875 ], [ 114.613241627862237, 30.458247314377097 ], [ 114.613240913199419, 30.458265217030217 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-025", "name": "停车区 30", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613468160201705, 30.458260568496875 ], [ 114.613492953541012, 30.458260451913322 ], [ 114.61350614275544, 30.458122922854976 ], [ 114.613477225894243, 30.458124491896935 ], [ 114.613468160201705, 30.458260568496875 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-026", "name": "停车区 31", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613464891128089, 30.458081733521297 ], [ 114.613489720319194, 30.458087346283985 ], [ 114.613495639772637, 30.457977057652009 ], [ 114.61347744201008, 30.45797427984154 ], [ 114.613464891128089, 30.458081733521297 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-027", "name": "停车区 32", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612796933657833, 30.457826226897787 ], [ 114.612828337783469, 30.45782607939093 ], [ 114.612843818054913, 30.457658469442226 ], [ 114.612812413983136, 30.457658616952074 ], [ 114.612796933657833, 30.457826226897787 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-028", "name": "停车区 33", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612786434828251, 30.458261589911263 ], [ 114.612804635168445, 30.45826436780559 ], [ 114.612828929260587, 30.457920584695529 ], [ 114.612805771603675, 30.45791783008853 ], [ 114.612786434828251, 30.458261589911263 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-029", "name": "停车区 34", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613594061251206, 30.457806251464344 ], [ 114.613628817903361, 30.457813247825651 ], [ 114.613643659039482, 30.457543972892086 ], [ 114.613618884461033, 30.45754695279517 ], [ 114.613594061251206, 30.457806251464344 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-030", "name": "停车区 35", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613553259347313, 30.458416930279977 ], [ 114.613583576688725, 30.458419174860182 ], [ 114.613582933623817, 30.45831655534429 ], [ 114.613558068043119, 30.458304739789657 ], [ 114.613553259347313, 30.458416930279977 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-031", "name": "停车区 36", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.61354403782434, 30.458264232313695 ], [ 114.613599133499534, 30.458263973203643 ], [ 114.613600602793611, 30.458058721206772 ], [ 114.613573024154476, 30.458054078241453 ], [ 114.61354403782434, 30.458264232313695 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-032", "name": "停车区 37", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613650595712627, 30.458560873075179 ], [ 114.614159873017456, 30.458589025267358 ], [ 114.6141530925089, 30.458562326615699 ], [ 114.613670346046916, 30.458547415166588 ], [ 114.613672525977094, 30.458543586888936 ], [ 114.613650595712627, 30.458560873075179 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-033", "name": "停车区 38", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614285549087469, 30.458597980579079 ], [ 114.614552335285993, 30.458615815935875 ], [ 114.61454779384195, 30.458594834619952 ], [ 114.614278783063881, 30.458573191153228 ], [ 114.614285549087469, 30.458597980579079 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-034", "name": "停车区 39", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614598577843253, 30.458609869141707 ], [ 114.614947117704531, 30.45866168735532 ], [ 114.614966858427749, 30.458646320010374 ], [ 114.614598493968387, 30.458596506729691 ], [ 114.614598577843253, 30.458609869141707 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-035", "name": "停车区 40", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613907752480713, 30.4582734017708 ], [ 114.614162680409763, 30.458290099602024 ], [ 114.614152859892116, 30.458261508725116 ], [ 114.61391306631576, 30.458242350297905 ], [ 114.613907752480713, 30.4582734017708 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-036", "name": "停车区 41", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613959636577945, 30.457658787712365 ], [ 114.614177897248823, 30.457671125443834 ], [ 114.61418433639048, 30.457643410464215 ], [ 114.613960564925165, 30.457631100327553 ], [ 114.613959636577945, 30.457658787712365 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-037", "name": "停车区 42", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614472995380311, 30.457682463966005 ], [ 114.614845605636305, 30.457707439098467 ], [ 114.614849846742615, 30.457680688539416 ], [ 114.614475055451223, 30.457659543916581 ], [ 114.614472995380311, 30.457682463966005 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-038", "name": "停车区 43", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.6155011466102, 30.458545150681136 ], [ 114.6158141734022, 30.458557039089051 ], [ 114.615794074513474, 30.458515129095463 ], [ 114.615516345585533, 30.458508803625502 ], [ 114.6155011466102, 30.458545150681136 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-039", "name": "停车区 44", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615975064505378, 30.458558188299541 ], [ 114.616195581194276, 30.458578148027648 ], [ 114.61620193982219, 30.458538024624669 ], [ 114.615979293962994, 30.458529529028368 ], [ 114.615975064505378, 30.458558188299541 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-040", "name": "停车区 45", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615993957216915, 30.459101722250868 ], [ 114.616176949890786, 30.459112312180526 ], [ 114.616174563887853, 30.459083684150123 ], [ 114.61600042659073, 30.459078779714748 ], [ 114.615993957216915, 30.459101722250868 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-041", "name": "停车区 46", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615475306229797, 30.458634490457989 ], [ 114.615612844565433, 30.458777037505545 ], [ 114.615641411389873, 30.458763537699156 ], [ 114.615492792462433, 30.45861149762337 ], [ 114.615475306229797, 30.458634490457989 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-042", "name": "停车区 47", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615107196376158, 30.458732467124442 ], [ 114.615385180563408, 30.45895453891562 ], [ 114.61540275086243, 30.458944909052956 ], [ 114.615119213764331, 30.458716182076952 ], [ 114.615107196376158, 30.458732467124442 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-043", "name": "停车区 48", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615713811526277, 30.459332758066022 ], [ 114.615734404992949, 30.459321919210755 ], [ 114.615506747530489, 30.459042572204588 ], [ 114.615488923914228, 30.459055781262009 ], [ 114.615713811526277, 30.459332758066022 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-044", "name": "停车区 49", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616518690943494, 30.458692563933663 ], [ 114.616542950171407, 30.458695312672909 ], [ 114.616550871247014, 30.458553035583115 ], [ 114.616529908652424, 30.458549316623031 ], [ 114.616518690943494, 30.458692563933663 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-045", "name": "停车区 50", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616506837560522, 30.458910275321934 ], [ 114.616526678363172, 30.458911136206627 ], [ 114.61653442452085, 30.458741175292108 ], [ 114.616514566359257, 30.458737451110839 ], [ 114.616506837560522, 30.458910275321934 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-046", "name": "停车区 51", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616473208221294, 30.459309724521479 ], [ 114.616504111193152, 30.459317216190154 ], [ 114.616523792396862, 30.458942906323944 ], [ 114.616501670853381, 30.458929645853392 ], [ 114.616473208221294, 30.459309724521479 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-047", "name": "停车区 52", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616626181489252, 30.459458401058697 ], [ 114.616957728604845, 30.459479745588773 ], [ 114.616962566151571, 30.459460390361624 ], [ 114.616626898138279, 30.459441214093502 ], [ 114.616626181489252, 30.459458401058697 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-048", "name": "停车区 53", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616512154640191, 30.460008234704574 ], [ 114.616589309473198, 30.460010733456961 ], [ 114.616591447244105, 30.460000223930432 ], [ 114.616514264260132, 30.459992950444871 ], [ 114.616512154640191, 30.460008234704574 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-049", "name": "停车区 54", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616626805033206, 30.460015328905111 ], [ 114.616741458922732, 30.460023379282962 ], [ 114.616735847610073, 30.460007177426927 ], [ 114.616632187871147, 30.459995256507657 ], [ 114.616626805033206, 30.460015328905111 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-050", "name": "停车区 55", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615762557749321, 30.45988472967835 ], [ 114.615792905603712, 30.459891746261651 ], [ 114.615793586659365, 30.459780766045718 ], [ 114.61577015442208, 30.459778491689189 ], [ 114.615762557749321, 30.45988472967835 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-051", "name": "停车区 56", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615784534094104, 30.459655514324194 ], [ 114.615806602303778, 30.459660182826138 ], [ 114.615795609757882, 30.459445442176513 ], [ 114.615773569705894, 30.459445546205167 ], [ 114.615784534094104, 30.459655514324194 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-052", "name": "停车区 57", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616101407772888, 30.45944638614041 ], [ 114.616075237674906, 30.459446509723733 ], [ 114.616072947695557, 30.45952050373894 ], [ 114.616094977714383, 30.459519206678145 ], [ 114.616101407772888, 30.45944638614041 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-053", "name": "停车区 58", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616139055942256, 30.45951899851708 ], [ 114.616159755183318, 30.459524868105152 ], [ 114.616163429071833, 30.459452060031275 ], [ 114.616139975002056, 30.459446204004415 ], [ 114.616139055942256, 30.45951899851708 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-054", "name": "停车区 59", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615942843486408, 30.459975959860252 ], [ 114.61616990168632, 30.459984434647989 ], [ 114.616170955566218, 30.459976791974498 ], [ 114.615940549514534, 30.459961651042519 ], [ 114.615942843486408, 30.459975959860252 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-055", "name": "停车区 60", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.616318733821046, 30.459995185697601 ], [ 114.616425663304256, 30.460001364108557 ], [ 114.616429986306116, 30.459987978678278 ], [ 114.616328573856293, 30.459982731052612 ], [ 114.616318733821046, 30.459995185697601 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-056", "name": "停车区 61", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615910938367904, 30.460176916435856 ], [ 114.616322691476739, 30.460203611186781 ], [ 114.61632836243966, 30.460185685112428 ], [ 114.615912479327875, 30.460159009876584 ], [ 114.615910938367904, 30.460176916435856 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-057", "name": "停车区 62", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615582152836595, 30.461931548572387 ], [ 114.615615220845868, 30.461932823394946 ], [ 114.615634413756183, 30.461567586840449 ], [ 114.615617884311675, 30.461567664842256 ], [ 114.615582152836595, 30.461931548572387 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-058", "name": "停车区 63", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614786193118434, 30.461791887534392 ], [ 114.615117729454752, 30.461560068027897 ], [ 114.615102766218286, 30.461546535191417 ], [ 114.614790463110339, 30.461769911722843 ], [ 114.614786193118434, 30.461791887534392 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-059", "name": "停车区 64", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614815456864221, 30.4617268828957 ], [ 114.615042520162405, 30.461560422622735 ], [ 114.615033372090821, 30.461551158806877 ], [ 114.614804644309629, 30.461716193842619 ], [ 114.614815456864221, 30.4617268828957 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-060", "name": "停车区 65", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614003319815765, 30.461886921852226 ], [ 114.614237594418839, 30.461903120959192 ], [ 114.614240227646491, 30.461884016250014 ], [ 114.614004597829222, 30.461870805821977 ], [ 114.614003319815765, 30.461886921852226 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-061", "name": "停车区 66", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.614008598923647, 30.461849904860838 ], [ 114.614189094200697, 30.461857408071072 ], [ 114.614189708867087, 30.461845472689191 ], [ 114.614007827076364, 30.461836781875633 ], [ 114.614008598923647, 30.461849904860838 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-062", "name": "停车区 67", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613252019661857, 30.461846601593209 ], [ 114.613429776840803, 30.461856505884338 ], [ 114.613429785816408, 30.461857938357397 ], [ 114.613430617086635, 30.461858649054648 ], [ 114.613433810196923, 30.46184073420569 ], [ 114.613249431653173, 30.461829430732305 ], [ 114.613252019661857, 30.461846601593209 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-063", "name": "停车区 68", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613479373681656, 30.461857705178389 ], [ 114.61380100555408, 30.461878386374462 ], [ 114.613801716280676, 30.461859768590745 ], [ 114.613481744468203, 30.461840508801341 ], [ 114.613479373681656, 30.461857705178389 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-064", "name": "停车区 69", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613563466452888, 30.461824373963463 ], [ 114.613801577126395, 30.461837573517613 ], [ 114.613801509796318, 30.461826834374509 ], [ 114.613562540955954, 30.461808628355929 ], [ 114.613563466452888, 30.461824373963463 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-065", "name": "停车区 70", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613265555070029, 30.462523704758688 ], [ 114.613280690672937, 30.462521246447857 ], [ 114.613288178063883, 30.462397109300309 ], [ 114.613270219639432, 30.462388841422449 ], [ 114.613265555070029, 30.462523704758688 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-066", "name": "停车区 71", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613274343130414, 30.462607194163759 ], [ 114.613358420109762, 30.462615151189425 ], [ 114.613359669539449, 30.462594860526533 ], [ 114.613268741647531, 30.462592900850449 ], [ 114.613274343130414, 30.462607194163759 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-067", "name": "停车区 72", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613091945896159, 30.462296603859759 ], [ 114.613120872970853, 30.462296467910868 ], [ 114.613127822486149, 30.46208641596245 ], [ 114.613112632098307, 30.462080522210872 ], [ 114.613091945896159, 30.462296603859759 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-068", "name": "停车区 73", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612654829798885, 30.462273776666848 ], [ 114.61267353344752, 30.46226891616331 ], [ 114.612685460702409, 30.462061704230614 ], [ 114.612664506005629, 30.46205893926286 ], [ 114.612654829798885, 30.462273776666848 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-069", "name": "停车区 74", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612042596977091, 30.461779565924925 ], [ 114.61211493092712, 30.461782089928775 ], [ 114.612116892406334, 30.461765257202114 ], [ 114.612047863091988, 30.461762717144865 ], [ 114.612042596977091, 30.461779565924925 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-070", "name": "停车区 75", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612164546265973, 30.461786153566297 ], [ 114.612308405640121, 30.461794428077795 ], [ 114.612311189395442, 30.461776874680872 ], [ 114.612168551364334, 30.461765728859621 ], [ 114.612164546265973, 30.461786153566297 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-071", "name": "停车区 76", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610138066602559, 30.459084996898408 ], [ 114.610133853724477, 30.459072130009773 ], [ 114.609687858643795, 30.459252491717017 ], [ 114.609697901552082, 30.459272491754209 ], [ 114.610138066602559, 30.459084996898408 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-072", "name": "停车区 77", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610034146097505, 30.460261969538969 ], [ 114.610054778233092, 30.460257100944673 ], [ 114.609954185462286, 30.460029652033544 ], [ 114.60993492242099, 30.460033321732116 ], [ 114.609936301443327, 30.460033315284903 ], [ 114.610034146097505, 30.460261969538969 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-073", "name": "停车区 78", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610192363335642, 30.460057052040113 ], [ 114.610191263826977, 30.460054797198637 ], [ 114.610191278693705, 30.460057182637261 ], [ 114.610192363335642, 30.460057052040113 ] ] ], [ [ [ 114.610319629686487, 30.46031791293148 ], [ 114.610334737185013, 30.460310682427828 ], [ 114.610211925016614, 30.460054700561287 ], [ 114.610192363335642, 30.460057052040113 ], [ 114.610319629686487, 30.46031791293148 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-074", "name": "停车区 79", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610967570131677, 30.461488921542522 ], [ 114.610986252232408, 30.461480720129863 ], [ 114.61088711684998, 30.461310783830147 ], [ 114.610871172874909, 30.461316585248206 ], [ 114.610967570131677, 30.461488921542522 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-075", "name": "停车区 80", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.6110023931586, 30.461025214643602 ], [ 114.610888697757275, 30.46101679743753 ], [ 114.610886743430314, 30.461034706429647 ], [ 114.611005951099202, 30.46104369516101 ], [ 114.6110023931586, 30.461025214643602 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-076", "name": "停车区 81", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.610859790294541, 30.461019915644268 ], [ 114.610820693839912, 30.460935375467592 ], [ 114.610820705006134, 30.460937165234267 ], [ 114.610806939259149, 30.460938422714797 ], [ 114.610809187662483, 30.460967648283056 ], [ 114.610822413422966, 30.460990258867689 ], [ 114.610859790294541, 30.461019915644268 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-077", "name": "停车区 82", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612402511248931, 30.46085246414966 ], [ 114.612552139806297, 30.46085820524738 ], [ 114.612553638534152, 30.460833855354796 ], [ 114.612398219950734, 30.460827425180007 ], [ 114.612402511248931, 30.46085246414966 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-078", "name": "停车区 83", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.612411504398224, 30.460704931730955 ], [ 114.61255784542881, 30.460713553287952 ], [ 114.612565957772119, 30.460689170689601 ], [ 114.612408855779378, 30.460677737377495 ], [ 114.612411504398224, 30.460704931730955 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-079", "name": "停车区 84", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615410948521927, 30.459648870857119 ], [ 114.615426773144861, 30.459646411252642 ], [ 114.61543087456657, 30.459531834708287 ], [ 114.61541296645126, 30.459531919184631 ], [ 114.615410948521927, 30.459648870857119 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-080", "name": "停车区 85", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.615443995528011, 30.459646927349336 ], [ 114.615460520894032, 30.459646252051453 ], [ 114.6154687673327, 30.459534043110882 ], [ 114.615452946501037, 30.459537102795409 ], [ 114.615443995528011, 30.459646927349336 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-081", "name": "停车区 86", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613591753907656, 30.460917477966653 ], [ 114.613989742440026, 30.46094519943799 ], [ 114.613991808030121, 30.460923234023159 ], [ 114.613592754159669, 30.460901244877007 ], [ 114.613591753907656, 30.460917477966653 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-082", "name": "停车区 87", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613610253835589, 30.460880161518372 ], [ 114.613784450687703, 30.460893661725731 ], [ 114.613783246992966, 30.46087743845337 ], [ 114.61361237932924, 30.460867740608023 ], [ 114.613610253835589, 30.460880161518372 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-083", "name": "停车区 88", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613806495148836, 30.460894512102222 ], [ 114.61399499352153, 30.460904125065102 ], [ 114.613992670514975, 30.460885043683749 ], [ 114.613809704625623, 30.460879223260122 ], [ 114.613806495148836, 30.460894512102222 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-084", "name": "停车区 89", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613624076686691, 30.460799907567861 ], [ 114.613793824313419, 30.460806745087186 ], [ 114.613791486840711, 30.460785755033651 ], [ 114.613622837118115, 30.460777956051977 ], [ 114.613624076686691, 30.460799907567861 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-085", "name": "停车区 90", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613805956514696, 30.460808597293045 ], [ 114.613984506573274, 30.460813486064431 ], [ 114.613987692062935, 30.460794377106261 ], [ 114.613814647108498, 30.460788509445848 ], [ 114.613805956514696, 30.460808597293045 ] ] ] ] } },
-    { "type": "Feature", "properties": { "id": "parking-086", "name": "停车区 91", "isNoParking": false, "noParkingReason": null, "noParkingDate": null, "noParkingStartTime": null, "noParkingEndTime": null }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ 114.613602751303006, 30.460737957157832 ], [ 114.613597343872414, 30.460754210976457 ], [ 114.613986482984942, 30.460777199217905 ], [ 114.613987494508152, 30.460762875358956 ], [ 114.613602751303006, 30.460737957157832 ] ] ] ] } }
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "8f8dd5c1-8391-45ac-963b-2aaf10c86f68",
+        "name": "停车区 6",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.60981247908228,
+              30.458899941881906
+            ],
+            [
+              114.60994768079343,
+              30.458845851452185
+            ],
+            [
+              114.60993985554624,
+              30.458827750352956
+            ],
+            [
+              114.60980468104722,
+              30.458886614967916
+            ],
+            [
+              114.60981247908228,
+              30.458899941881906
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "cc4f206a-2585-4423-a263-0b20d30e2876",
+        "name": "停车区 7",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.60968674536367,
+              30.458656589919283
+            ],
+            [
+              114.60968643479762,
+              30.458655192437362
+            ],
+            [
+              114.60968314683235,
+              30.4586580711838
+            ],
+            [
+              114.60968674536367,
+              30.458656589919283
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7fe88eff-dd9d-45e1-9b7c-c5a2d134d859",
+        "name": "停车区 7",
+        "isNoParking": true,
+        "noParkingReason": "道路维修",
+        "noParkingDate": "2025-06-05T10:20:00.000Z",
+        "noParkingStartTime": "2025-06-10T08:00:00.000Z",
+        "noParkingEndTime": "2025-06-20T18:00:00.000Z"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.60968983506027,
+              30.45867045029985
+            ],
+            [
+              114.60982505094611,
+              30.458618267017027
+            ],
+            [
+              114.6098073487167,
+              30.45860689568438
+            ],
+            [
+              114.60968674536367,
+              30.458656589919283
+            ],
+            [
+              114.60968983506027,
+              30.45867045029985
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b6297553-3c78-4854-8d2c-1cb0d299b4b6",
+        "name": "停车区 8",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6096126992456,
+              30.459236699871713
+            ],
+            [
+              114.61030520753613,
+              30.458960436802048
+            ],
+            [
+              114.61029629217951,
+              30.458944250112342
+            ],
+            [
+              114.60960817729875,
+              30.4592185833182
+            ],
+            [
+              114.6096126992456,
+              30.459236699871713
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3eb29c12-5c35-41e6-800b-67b574e068c8",
+        "name": "停车区 9",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61041504117325,
+              30.458879674520748
+            ],
+            [
+              114.61053938999306,
+              30.458830169092007
+            ],
+            [
+              114.61053033064788,
+              30.45881290898009
+            ],
+            [
+              114.61040739487727,
+              30.45886837568934
+            ],
+            [
+              114.61041504117325,
+              30.458879674520748
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ce5512bf-f467-40c1-9014-6b98f99013f0",
+        "name": "停车区 10",
+        "isNoParking": true,
+        "noParkingReason": "消防通道",
+        "noParkingDate": "2025-06-05T11:00:00.000Z",
+        "noParkingStartTime": "2025-06-05T11:00:00.000Z",
+        "noParkingEndTime": "2025-12-31T23:59:59.000Z"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61060602061742,
+              30.45880181528778
+            ],
+            [
+              114.6107509563415,
+              30.45874027805546
+            ],
+            [
+              114.61074053285728,
+              30.458725412054864
+            ],
+            [
+              114.61059628781986,
+              30.45878754118147
+            ],
+            [
+              114.61060602061742,
+              30.45880181528778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "e785372b-2397-4f29-87a3-ffa18179b587",
+        "name": "停车区 11",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6107797177515,
+              30.45854086563591
+            ],
+            [
+              114.61080035692187,
+              30.45853718882152
+            ],
+            [
+              114.61062897094995,
+              30.45822296190135
+            ],
+            [
+              114.610602830924,
+              30.458227858563923
+            ],
+            [
+              114.6107797177515,
+              30.45854086563591
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d1db4703-b65f-4878-be81-8d908b619c5f",
+        "name": "停车区 12",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61104478049326,
+              30.458548024671288
+            ],
+            [
+              114.61106454310203,
+              30.45853647583364
+            ],
+            [
+              114.61096255628152,
+              30.458350800670754
+            ],
+            [
+              114.61094112230121,
+              30.45835949338804
+            ],
+            [
+              114.61104478049326,
+              30.458548024671288
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "79bc017a-2d82-456b-9783-48495075a39b",
+        "name": "停车区 13",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61092331574233,
+              30.45833141367502
+            ],
+            [
+              114.61093868912772,
+              30.458322750992604
+            ],
+            [
+              114.61083725310124,
+              30.45813707314239
+            ],
+            [
+              114.61081856204902,
+              30.458143842057762
+            ],
+            [
+              114.61092331574233,
+              30.45833141367502
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "db865165-b453-4d5a-8861-a13dafeabacc",
+        "name": "停车区 14",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61132270854199,
+              30.458538209613945
+            ],
+            [
+              114.61153577105753,
+              30.45846800217045
+            ],
+            [
+              114.61152736498269,
+              30.458445367405297
+            ],
+            [
+              114.611308821398,
+              30.45852037483725
+            ],
+            [
+              114.61132270854199,
+              30.458538209613945
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "08ceddcc-cee0-483d-91be-126af54c79eb",
+        "name": "停车区 15",
+        "isNoParking": true,
+        "noParkingReason": "道路维修",
+        "noParkingDate": "2025-06-12T10:40:58.264Z",
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61160327069899,
+              30.458468878239263
+            ],
+            [
+              114.61188283072316,
+              30.458459212897235
+            ],
+            [
+              114.61188550162069,
+              30.458446075395113
+            ],
+            [
+              114.61161134136849,
+              30.45843781393078
+            ],
+            [
+              114.6116099493752,
+              30.45843543494786
+            ],
+            [
+              114.61160327069899,
+              30.458468878239263
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "447a0e34-8a68-41f2-9be0-c4b1b184b163",
+        "name": "停车区 16",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6115660991168,
+              30.458151462746343
+            ],
+            [
+              114.61189268013564,
+              30.458172603995514
+            ],
+            [
+              114.61189266521484,
+              30.45817021635486
+            ],
+            [
+              114.61188990976562,
+              30.458170229277986
+            ],
+            [
+              114.6118993891545,
+              30.45814393321514
+            ],
+            [
+              114.61156320887962,
+              30.45812999680765
+            ],
+            [
+              114.6115660991168,
+              30.458151462746343
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "84ef9d34-d727-407a-a162-7a8aa6058773",
+        "name": "停车区 17",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6121062437475,
+              30.458182341667825
+            ],
+            [
+              114.61239561289345,
+              30.45820007604704
+            ],
+            [
+              114.6123623237831,
+              30.45816324067764
+            ],
+            [
+              114.61210742624888,
+              30.458151309645764
+            ],
+            [
+              114.6121062437475,
+              30.458182341667825
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b93eb827-a60e-4776-96a4-fca51ba8608a",
+        "name": "停车区 18",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61143881133378,
+              30.45790707647829
+            ],
+            [
+              114.6117506121368,
+              30.45781110619896
+            ],
+            [
+              114.61173555854917,
+              30.457782537466347
+            ],
+            [
+              114.61143042173651,
+              30.45788706882474
+            ],
+            [
+              114.61143881133378,
+              30.45790707647829
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "692fb5cb-9050-4514-aaf0-061242843fc5",
+        "name": "停车区 19",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61205924081854,
+              30.457736630097415
+            ],
+            [
+              114.61240273045647,
+              30.457686331957035
+            ],
+            [
+              114.61239920144604,
+              30.457650549927965
+            ],
+            [
+              114.6120574645391,
+              30.457716591459647
+            ],
+            [
+              114.61205924081854,
+              30.457736630097415
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "e651a852-df95-4275-a2a7-ed4ff9304f7e",
+        "name": "停车区 20",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.612105177359,
+              30.458477857368713
+            ],
+            [
+              114.61268922103064,
+              30.458508595055374
+            ],
+            [
+              114.61268776991182,
+              30.45849666992486
+            ],
+            [
+              114.61210258484621,
+              30.4584596129335
+            ],
+            [
+              114.612105177359,
+              30.458477857368713
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "93b78cf8-1a66-4b2a-bf7f-ab0edb4cb7fc",
+        "name": "停车区 21",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61276591475098,
+              30.458425528257436
+            ],
+            [
+              114.6127882137573,
+              30.45842327419798
+            ],
+            [
+              114.61279729832646,
+              30.45829006093201
+            ],
+            [
+              114.61277580627402,
+              30.458289445619876
+            ],
+            [
+              114.61276591475098,
+              30.458425528257436
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "8a35c48c-da45-4461-9809-7a83db36e046",
+        "name": "停车区 22",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61292054757456,
+              30.458439119347386
+            ],
+            [
+              114.61294452765208,
+              30.45844115601298
+            ],
+            [
+              114.61295677630163,
+              30.458285731580833
+            ],
+            [
+              114.61293610396199,
+              30.458283681579427
+            ],
+            [
+              114.61292054757456,
+              30.458439119347386
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "65e093d5-a9a7-4be3-80e3-fc10cce1fbe3",
+        "name": "停车区 23",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61297504631193,
+              30.4584317056789
+            ],
+            [
+              114.61299819961081,
+              30.458433744016954
+            ],
+            [
+              114.61300472483433,
+              30.458287655624922
+            ],
+            [
+              114.61298489720654,
+              30.458289179649334
+            ],
+            [
+              114.61297504631193,
+              30.4584317056789
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f6a27c83-1f9d-4658-8d8c-e40eeee24ce9",
+        "name": "停车区 24",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61290280479857,
+              30.458245175495936
+            ],
+            [
+              114.61313097911433,
+              30.4582569905225
+            ],
+            [
+              114.61313334795379,
+              30.45823907954535
+            ],
+            [
+              114.61290268827425,
+              30.458226559940172
+            ],
+            [
+              114.61290280479857,
+              30.458245175495936
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c47309e3-ca43-441b-a32d-db5331d5cf14",
+        "name": "停车区 25",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6128828267189,
+              30.458222357347093
+            ],
+            [
+              114.61290268827425,
+              30.458226559940172
+            ],
+            [
+              114.61291420817602,
+              30.458086891652986
+            ],
+            [
+              114.61289189579647,
+              30.458086996471437
+            ],
+            [
+              114.6128828267189,
+              30.458222357347093
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "0841f384-ff52-488b-a45b-fa6a9b979bb3",
+        "name": "停车区 26",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61285538723244,
+              30.458069778480972
+            ],
+            [
+              114.61288015064358,
+              30.45806488783505
+            ],
+            [
+              114.6128876233737,
+              30.457938365185644
+            ],
+            [
+              114.6128655637863,
+              30.45793488917289
+            ],
+            [
+              114.61285538723244,
+              30.458069778480972
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "02f83229-4b56-4578-b898-3953010e7961",
+        "name": "停车区 27",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61335037715494,
+              30.45845658253629
+            ],
+            [
+              114.61336855513301,
+              30.458455782469745
+            ],
+            [
+              114.61337921043076,
+              30.458309672995714
+            ],
+            [
+              114.61335359480225,
+              30.458310509681596
+            ],
+            [
+              114.61335037715494,
+              30.45845658253629
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b4a16ac4-fb0f-45f9-890f-5154568ce985",
+        "name": "停车区 28",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61339428803987,
+              30.45847355912872
+            ],
+            [
+              114.61341825852088,
+              30.458474162685622
+            ],
+            [
+              114.61342715643534,
+              30.458311596345723
+            ],
+            [
+              114.61340731790175,
+              30.45831097336316
+            ],
+            [
+              114.61339428803987,
+              30.45847355912872
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "cca2e80a-7014-4a4f-aa7e-6119564ced90",
+        "name": "停车区 29",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61324091319942,
+              30.45826521703021
+            ],
+            [
+              114.61347158197742,
+              30.45827916850934
+            ],
+            [
+              114.6134681602017,
+              30.458260568496875
+            ],
+            [
+              114.61324162786227,
+              30.45824731437709
+            ],
+            [
+              114.61324091319942,
+              30.45826521703021
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "a1d67a31-cd43-4e69-8283-5865c8e72271",
+        "name": "停车区 30",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6134681602017,
+              30.458260568496875
+            ],
+            [
+              114.61349295354104,
+              30.458260451913322
+            ],
+            [
+              114.61350614275544,
+              30.458122922854976
+            ],
+            [
+              114.61347722589427,
+              30.458124491896942
+            ],
+            [
+              114.6134681602017,
+              30.458260568496875
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c4700abf-c76c-466d-aed6-6c2581cd9521",
+        "name": "停车区 31",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61346489112812,
+              30.45808173352129
+            ],
+            [
+              114.61348972031922,
+              30.45808734628398
+            ],
+            [
+              114.61349563977264,
+              30.457977057652
+            ],
+            [
+              114.61347744201008,
+              30.45797427984153
+            ],
+            [
+              114.61346489112812,
+              30.45808173352129
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "81e0443a-4cde-402a-9a50-c39961db5a26",
+        "name": "停车区 32",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61279693365783,
+              30.457826226897772
+            ],
+            [
+              114.61282833778347,
+              30.457826079390937
+            ],
+            [
+              114.61284381805491,
+              30.457658469442226
+            ],
+            [
+              114.61281241398314,
+              30.457658616952067
+            ],
+            [
+              114.61279693365783,
+              30.457826226897772
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "5fd17c97-28ea-44f8-b249-9d2b85f9d293",
+        "name": "停车区 33",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61278643482825,
+              30.45826158991127
+            ],
+            [
+              114.61280463516846,
+              30.45826436780559
+            ],
+            [
+              114.6128289292606,
+              30.457920584695522
+            ],
+            [
+              114.6128057716037,
+              30.457917830088537
+            ],
+            [
+              114.61278643482825,
+              30.45826158991127
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "e8b88e15-6dc8-4d81-ac6a-becdc670f0e2",
+        "name": "停车区 34",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61359406125123,
+              30.45780625146435
+            ],
+            [
+              114.61362881790339,
+              30.457813247825644
+            ],
+            [
+              114.61364365903948,
+              30.45754397289208
+            ],
+            [
+              114.61361888446103,
+              30.45754695279517
+            ],
+            [
+              114.61359406125123,
+              30.45780625146435
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "1875eb62-da16-4753-bd06-1fe021d1c102",
+        "name": "停车区 35",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61355325934734,
+              30.458416930279967
+            ],
+            [
+              114.61358357668873,
+              30.45841917486019
+            ],
+            [
+              114.61358293362382,
+              30.458316555344297
+            ],
+            [
+              114.61355806804312,
+              30.458304739789654
+            ],
+            [
+              114.61355325934734,
+              30.458416930279967
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "93c898cf-26fe-441f-832f-76aac1035b89",
+        "name": "停车区 36",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61354403782434,
+              30.4582642323137
+            ],
+            [
+              114.61359913349953,
+              30.458263973203636
+            ],
+            [
+              114.61360060279361,
+              30.458058721206772
+            ],
+            [
+              114.6135730241545,
+              30.458054078241453
+            ],
+            [
+              114.61354403782434,
+              30.4582642323137
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7d00bbaf-b4cb-48ff-b905-297e5047602b",
+        "name": "停车区 37",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61365059571263,
+              30.458560873075175
+            ],
+            [
+              114.61415987301746,
+              30.458589025267358
+            ],
+            [
+              114.6141530925089,
+              30.45856232661569
+            ],
+            [
+              114.61367034604692,
+              30.4585474151666
+            ],
+            [
+              114.6136725259771,
+              30.458543586888943
+            ],
+            [
+              114.61365059571263,
+              30.458560873075175
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "39422930-15c8-4f60-b030-370e2abdefc7",
+        "name": "停车区 38",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61428554908747,
+              30.45859798057908
+            ],
+            [
+              114.61455233528599,
+              30.458615815935868
+            ],
+            [
+              114.61454779384195,
+              30.45859483461995
+            ],
+            [
+              114.61427878306388,
+              30.458573191153228
+            ],
+            [
+              114.61428554908747,
+              30.45859798057908
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "05cea94f-b4ff-4b6d-b1c0-059d355194f2",
+        "name": "停车区 39",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61459857784325,
+              30.4586098691417
+            ],
+            [
+              114.61494711770453,
+              30.458661687355306
+            ],
+            [
+              114.61496685842778,
+              30.45864632001038
+            ],
+            [
+              114.61459849396839,
+              30.458596506729695
+            ],
+            [
+              114.61459857784325,
+              30.4586098691417
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "2c4a9cfd-3ff4-4c07-9ccb-bc39080feb20",
+        "name": "停车区 40",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61390775248071,
+              30.4582734017708
+            ],
+            [
+              114.61416268040976,
+              30.458290099602017
+            ],
+            [
+              114.61415285989212,
+              30.458261508725112
+            ],
+            [
+              114.61391306631576,
+              30.45824235029789
+            ],
+            [
+              114.61390775248071,
+              30.4582734017708
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "0ea230f5-ee4a-4182-b29f-e3453e6960bd",
+        "name": "停车区 41",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61395963657795,
+              30.457658787712358
+            ],
+            [
+              114.61417789724882,
+              30.457671125443834
+            ],
+            [
+              114.61418433639048,
+              30.4576434104642
+            ],
+            [
+              114.61396056492516,
+              30.457631100327553
+            ],
+            [
+              114.61395963657795,
+              30.457658787712358
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fe61853f-3e48-4d93-8afe-5172c1536dee",
+        "name": "停车区 42",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61447299538031,
+              30.45768246396599
+            ],
+            [
+              114.6148456056363,
+              30.457707439098453
+            ],
+            [
+              114.61484984674264,
+              30.45768068853941
+            ],
+            [
+              114.61447505545122,
+              30.45765954391658
+            ],
+            [
+              114.61447299538031,
+              30.45768246396599
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4af15a79-7ec1-4c42-9cf0-4ecf76af03b4",
+        "name": "停车区 43",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6155011466102,
+              30.45854515068113
+            ],
+            [
+              114.6158141734022,
+              30.45855703908905
+            ],
+            [
+              114.61579407451347,
+              30.45851512909547
+            ],
+            [
+              114.61551634558553,
+              30.458508803625495
+            ],
+            [
+              114.6155011466102,
+              30.45854515068113
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "9ff6c791-25c4-4a10-b1d3-702156588233",
+        "name": "停车区 44",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61597506450539,
+              30.458558188299534
+            ],
+            [
+              114.61619558119429,
+              30.458578148027648
+            ],
+            [
+              114.61620193982222,
+              30.458538024624676
+            ],
+            [
+              114.615979293963,
+              30.458529529028375
+            ],
+            [
+              114.61597506450539,
+              30.458558188299534
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "dfe058bc-9956-4333-b2cf-9dec4be51f30",
+        "name": "停车区 45",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61599395721692,
+              30.45910172225086
+            ],
+            [
+              114.61617694989081,
+              30.459112312180526
+            ],
+            [
+              114.61617456388785,
+              30.459083684150112
+            ],
+            [
+              114.61600042659076,
+              30.459078779714748
+            ],
+            [
+              114.61599395721692,
+              30.45910172225086
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c6906cba-b689-4f6a-8694-7ec3b13c4e31",
+        "name": "停车区 46",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6154753062298,
+              30.45863449045799
+            ],
+            [
+              114.61561284456543,
+              30.458777037505545
+            ],
+            [
+              114.61564141138987,
+              30.458763537699156
+            ],
+            [
+              114.61549279246246,
+              30.45861149762337
+            ],
+            [
+              114.6154753062298,
+              30.45863449045799
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "5f6ef60d-12f0-449a-bdbd-35f55acedc12",
+        "name": "停车区 47",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61510719637616,
+              30.45873246712444
+            ],
+            [
+              114.61538518056341,
+              30.458954538915627
+            ],
+            [
+              114.61540275086243,
+              30.458944909052956
+            ],
+            [
+              114.61511921376433,
+              30.45871618207696
+            ],
+            [
+              114.61510719637616,
+              30.45873246712444
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "77f369d3-5a66-441b-8efd-60d025f491c3",
+        "name": "停车区 48",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61571381152628,
+              30.459332758066015
+            ],
+            [
+              114.61573440499298,
+              30.459321919210762
+            ],
+            [
+              114.61550674753049,
+              30.459042572204577
+            ],
+            [
+              114.61548892391426,
+              30.459055781262006
+            ],
+            [
+              114.61571381152628,
+              30.459332758066015
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "373a58bf-7116-4d10-9641-cf78a89c7b24",
+        "name": "停车区 49",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61651869094351,
+              30.458692563933656
+            ],
+            [
+              114.61654295017141,
+              30.45869531267291
+            ],
+            [
+              114.61655087124704,
+              30.45855303558311
+            ],
+            [
+              114.61652990865242,
+              30.458549316623024
+            ],
+            [
+              114.61651869094351,
+              30.458692563933656
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "99a96858-6614-4ea6-9ec3-59daf0cc7621",
+        "name": "停车区 50",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61650683756052,
+              30.45891027532192
+            ],
+            [
+              114.6165266783632,
+              30.45891113620662
+            ],
+            [
+              114.61653442452088,
+              30.458741175292108
+            ],
+            [
+              114.61651456635929,
+              30.45873745111084
+            ],
+            [
+              114.61650683756052,
+              30.45891027532192
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b5bc42a2-a6e2-4eac-8c20-4f34f23ed900",
+        "name": "停车区 51",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6164732082213,
+              30.45930972452148
+            ],
+            [
+              114.61650411119317,
+              30.459317216190144
+            ],
+            [
+              114.61652379239686,
+              30.458942906323937
+            ],
+            [
+              114.61650167085341,
+              30.458929645853384
+            ],
+            [
+              114.6164732082213,
+              30.45930972452148
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "957b4c5d-1a1e-4d42-8bac-7a4e1d9d8fce",
+        "name": "停车区 52",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61662618148925,
+              30.45945840105869
+            ],
+            [
+              114.61695772860487,
+              30.459479745588773
+            ],
+            [
+              114.6169625661516,
+              30.459460390361624
+            ],
+            [
+              114.61662689813828,
+              30.459441214093502
+            ],
+            [
+              114.61662618148925,
+              30.45945840105869
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "9d09a0f5-aae3-4e40-9af3-9a19e8ce06b6",
+        "name": "停车区 53",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61651215464019,
+              30.460008234704574
+            ],
+            [
+              114.61658930947323,
+              30.460010733456954
+            ],
+            [
+              114.6165914472441,
+              30.460000223930425
+            ],
+            [
+              114.61651426426013,
+              30.459992950444857
+            ],
+            [
+              114.61651215464019,
+              30.460008234704574
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c2a95906-70d0-44f1-a206-f41ed653b2bc",
+        "name": "停车区 54",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61662680503323,
+              30.46001532890511
+            ],
+            [
+              114.61674145892273,
+              30.460023379282962
+            ],
+            [
+              114.61673584761007,
+              30.460007177426927
+            ],
+            [
+              114.61663218787115,
+              30.459995256507657
+            ],
+            [
+              114.61662680503323,
+              30.46001532890511
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d121f11e-936b-4ed2-9c52-06dc16b60cd2",
+        "name": "停车区 55",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61576255774932,
+              30.45988472967835
+            ],
+            [
+              114.61579290560371,
+              30.45989174626165
+            ],
+            [
+              114.61579358665936,
+              30.459780766045714
+            ],
+            [
+              114.61577015442208,
+              30.45977849168919
+            ],
+            [
+              114.61576255774932,
+              30.45988472967835
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f42c8ef2-e9d7-4a9a-917a-5badb29117ff",
+        "name": "停车区 56",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61578453409413,
+              30.459655514324186
+            ],
+            [
+              114.61580660230378,
+              30.459660182826138
+            ],
+            [
+              114.61579560975791,
+              30.45944544217652
+            ],
+            [
+              114.6157735697059,
+              30.45944554620516
+            ],
+            [
+              114.61578453409413,
+              30.459655514324186
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "076afcce-f2ad-47c5-ae32-100920cba216",
+        "name": "停车区 57",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61610140777289,
+              30.45944638614041
+            ],
+            [
+              114.6160752376749,
+              30.45944650972372
+            ],
+            [
+              114.61607294769556,
+              30.459520503738947
+            ],
+            [
+              114.61609497771438,
+              30.459519206678145
+            ],
+            [
+              114.61610140777289,
+              30.45944638614041
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "e922994b-c6bb-4cee-a090-62d73fa958e8",
+        "name": "停车区 58",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61613905594226,
+              30.45951899851707
+            ],
+            [
+              114.61615975518332,
+              30.459524868105138
+            ],
+            [
+              114.61616342907185,
+              30.459452060031275
+            ],
+            [
+              114.61613997500206,
+              30.459446204004415
+            ],
+            [
+              114.61613905594226,
+              30.45951899851707
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "113fd33e-1a01-4f31-8d7d-abc4e140740e",
+        "name": "停车区 59",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61594284348644,
+              30.45997595986025
+            ],
+            [
+              114.61616990168632,
+              30.45998443464799
+            ],
+            [
+              114.61617095556622,
+              30.459976791974505
+            ],
+            [
+              114.61594054951453,
+              30.459961651042516
+            ],
+            [
+              114.61594284348644,
+              30.45997595986025
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b1a47e15-9c69-45a7-a5a3-ff314989b56f",
+        "name": "停车区 60",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61631873382107,
+              30.459995185697608
+            ],
+            [
+              114.61642566330426,
+              30.460001364108543
+            ],
+            [
+              114.61642998630613,
+              30.459987978678285
+            ],
+            [
+              114.6163285738563,
+              30.459982731052612
+            ],
+            [
+              114.61631873382107,
+              30.459995185697608
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "69ed771f-4931-42f4-84bd-1fb246fa75fc",
+        "name": "停车区 61",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6159109383679,
+              30.460176916435856
+            ],
+            [
+              114.61632269147674,
+              30.460203611186778
+            ],
+            [
+              114.61632836243966,
+              30.46018568511242
+            ],
+            [
+              114.61591247932787,
+              30.460159009876584
+            ],
+            [
+              114.6159109383679,
+              30.460176916435856
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "463db163-ad83-4c9b-9863-0db217208fc3",
+        "name": "停车区 62",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61558215283662,
+              30.461931548572387
+            ],
+            [
+              114.61561522084587,
+              30.461932823394942
+            ],
+            [
+              114.61563441375618,
+              30.46156758684045
+            ],
+            [
+              114.61561788431167,
+              30.46156766484225
+            ],
+            [
+              114.61558215283662,
+              30.461931548572387
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b9c74713-a8ff-46ec-ad57-09dc64c34731",
+        "name": "停车区 63",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61478619311843,
+              30.461791887534392
+            ],
+            [
+              114.61511772945475,
+              30.461560068027897
+            ],
+            [
+              114.61510276621829,
+              30.461546535191417
+            ],
+            [
+              114.61479046311034,
+              30.46176991172283
+            ],
+            [
+              114.61478619311843,
+              30.461791887534392
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "afbe5cbb-a764-42b7-8baf-ffdaab2e86a3",
+        "name": "停车区 64",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61481545686422,
+              30.461726882895714
+            ],
+            [
+              114.6150425201624,
+              30.46156042262273
+            ],
+            [
+              114.61503337209082,
+              30.461551158806877
+            ],
+            [
+              114.61480464430963,
+              30.46171619384262
+            ],
+            [
+              114.61481545686422,
+              30.461726882895714
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "2cf11f75-e64a-4e62-bd0e-a23cd9a85c58",
+        "name": "停车区 65",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6140033198158,
+              30.461886921852233
+            ],
+            [
+              114.61423759441884,
+              30.461903120959185
+            ],
+            [
+              114.61424022764652,
+              30.46188401625002
+            ],
+            [
+              114.61400459782922,
+              30.461870805821977
+            ],
+            [
+              114.6140033198158,
+              30.461886921852233
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fe9c9395-e213-466f-81a8-8cb6428b0c70",
+        "name": "停车区 66",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61400859892365,
+              30.46184990486083
+            ],
+            [
+              114.6141890942007,
+              30.461857408071072
+            ],
+            [
+              114.61418970886712,
+              30.461845472689184
+            ],
+            [
+              114.61400782707636,
+              30.461836781875625
+            ],
+            [
+              114.61400859892365,
+              30.46184990486083
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "f1ac4f39-a55f-4fd9-ad92-d606e3526f24",
+        "name": "停车区 67",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61325201966186,
+              30.46184660159321
+            ],
+            [
+              114.6134297768408,
+              30.46185650588433
+            ],
+            [
+              114.61342978581641,
+              30.461857938357397
+            ],
+            [
+              114.61343061708664,
+              30.461858649054644
+            ],
+            [
+              114.61343381019695,
+              30.46184073420569
+            ],
+            [
+              114.61324943165317,
+              30.461829430732312
+            ],
+            [
+              114.61325201966186,
+              30.46184660159321
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7969d24d-f4c5-4cf1-8d9b-98f48223d47a",
+        "name": "停车区 68",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61347937368167,
+              30.46185770517839
+            ],
+            [
+              114.6138010055541,
+              30.46187838637446
+            ],
+            [
+              114.61380171628069,
+              30.461859768590738
+            ],
+            [
+              114.6134817444682,
+              30.46184050880134
+            ],
+            [
+              114.61347937368167,
+              30.46185770517839
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "afd62c09-9f98-451e-bf23-645ceef8b605",
+        "name": "停车区 69",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61356346645289,
+              30.461824373963463
+            ],
+            [
+              114.6138015771264,
+              30.461837573517602
+            ],
+            [
+              114.61380150979632,
+              30.46182683437451
+            ],
+            [
+              114.61356254095595,
+              30.46180862835593
+            ],
+            [
+              114.61356346645289,
+              30.461824373963463
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7719c596-7f15-4fd6-acf8-87cad43efc3d",
+        "name": "停车区 70",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61326555507006,
+              30.462523704758684
+            ],
+            [
+              114.61328069067294,
+              30.462521246447857
+            ],
+            [
+              114.61328817806388,
+              30.46239710930031
+            ],
+            [
+              114.61327021963943,
+              30.46238884142245
+            ],
+            [
+              114.61326555507006,
+              30.462523704758684
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4bd840c4-1a74-4c21-a87f-60ae70ac1291",
+        "name": "停车区 71",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61327434313041,
+              30.46260719416376
+            ],
+            [
+              114.61335842010976,
+              30.462615151189425
+            ],
+            [
+              114.61335966953945,
+              30.462594860526526
+            ],
+            [
+              114.61326874164753,
+              30.462592900850442
+            ],
+            [
+              114.61327434313041,
+              30.46260719416376
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b13db190-da5e-4d74-a411-26edd870ed56",
+        "name": "停车区 72",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61309194589617,
+              30.462296603859752
+            ],
+            [
+              114.61312087297088,
+              30.46229646791086
+            ],
+            [
+              114.61312782248616,
+              30.462086415962435
+            ],
+            [
+              114.61311263209831,
+              30.462080522210872
+            ],
+            [
+              114.61309194589617,
+              30.462296603859752
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "051afe60-918a-4a87-bbe8-79746d107a86",
+        "name": "停车区 73",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61265482979888,
+              30.462273776666855
+            ],
+            [
+              114.61267353344752,
+              30.462268916163303
+            ],
+            [
+              114.61268546070244,
+              30.462061704230614
+            ],
+            [
+              114.61266450600563,
+              30.462058939262867
+            ],
+            [
+              114.61265482979888,
+              30.462273776666855
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "d4a789e2-6069-48ed-8526-3e2a9aaaa829",
+        "name": "停车区 74",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61204259697709,
+              30.461779565924925
+            ],
+            [
+              114.61211493092712,
+              30.461782089928757
+            ],
+            [
+              114.61211689240636,
+              30.461765257202114
+            ],
+            [
+              114.61204786309199,
+              30.46176271714485
+            ],
+            [
+              114.61204259697709,
+              30.461779565924925
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "a1474488-d221-4d99-95f9-77628ca664b0",
+        "name": "停车区 75",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61216454626597,
+              30.461786153566305
+            ],
+            [
+              114.61230840564012,
+              30.461794428077795
+            ],
+            [
+              114.61231118939547,
+              30.461776874680872
+            ],
+            [
+              114.61216855136433,
+              30.46176572885962
+            ],
+            [
+              114.61216454626597,
+              30.461786153566305
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "519f700c-8130-4465-ad04-8b0a99ed03fb",
+        "name": "停车区 76",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61013806660257,
+              30.459084996898408
+            ],
+            [
+              114.61013385372448,
+              30.459072130009755
+            ],
+            [
+              114.6096878586438,
+              30.459252491717017
+            ],
+            [
+              114.60969790155208,
+              30.459272491754202
+            ],
+            [
+              114.61013806660257,
+              30.459084996898408
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "8e7f5c00-b963-442c-b2e0-d8c322d89fdd",
+        "name": "停车区 77",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6100341460975,
+              30.460261969538976
+            ],
+            [
+              114.61005477823309,
+              30.46025710094466
+            ],
+            [
+              114.60995418546229,
+              30.460029652033526
+            ],
+            [
+              114.60993492242099,
+              30.460033321732105
+            ],
+            [
+              114.60993630144333,
+              30.460033315284893
+            ],
+            [
+              114.6100341460975,
+              30.460261969538976
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4ba5495f-ea26-416d-bd9d-6f592b71cdfd",
+        "name": "停车区 78",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61019236333564,
+              30.460057052040092
+            ],
+            [
+              114.61019126382698,
+              30.460054797198637
+            ],
+            [
+              114.6101912786937,
+              30.46005718263726
+            ],
+            [
+              114.61019236333564,
+              30.460057052040092
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "a30ab6b8-20a8-40cc-a087-1f4441b248ad",
+        "name": "停车区 78",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61031962968649,
+              30.46031791293147
+            ],
+            [
+              114.61033473718501,
+              30.46031068242783
+            ],
+            [
+              114.61021192501664,
+              30.460054700561287
+            ],
+            [
+              114.61019236333564,
+              30.460057052040092
+            ],
+            [
+              114.61031962968649,
+              30.46031791293147
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "9a578a53-ca98-4fb4-a6ed-a5123d952332",
+        "name": "停车区 79",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61096757013168,
+              30.46148892154252
+            ],
+            [
+              114.61098625223241,
+              30.46148072012987
+            ],
+            [
+              114.61088711684998,
+              30.461310783830147
+            ],
+            [
+              114.61087117287491,
+              30.461316585248206
+            ],
+            [
+              114.61096757013168,
+              30.46148892154252
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "fbfb1eb0-30be-47ca-b045-1e95f664f66f",
+        "name": "停车区 80",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6110023931586,
+              30.461025214643595
+            ],
+            [
+              114.6108886977573,
+              30.46101679743753
+            ],
+            [
+              114.61088674343031,
+              30.461034706429647
+            ],
+            [
+              114.6110059510992,
+              30.461043695161003
+            ],
+            [
+              114.6110023931586,
+              30.461025214643595
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "30f83a21-392f-4bca-af4c-5e5aa57a4eb0",
+        "name": "停车区 81",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61085979029457,
+              30.46101991564426
+            ],
+            [
+              114.61082069383991,
+              30.460935375467592
+            ],
+            [
+              114.61082070500616,
+              30.46093716523426
+            ],
+            [
+              114.61080693925915,
+              30.46093842271479
+            ],
+            [
+              114.61080918766251,
+              30.46096764828304
+            ],
+            [
+              114.610822413423,
+              30.460990258867696
+            ],
+            [
+              114.61085979029457,
+              30.46101991564426
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "aaebe52e-317b-4bb2-a969-0d7c9dc2fbbc",
+        "name": "停车区 82",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61240251124894,
+              30.460852464149667
+            ],
+            [
+              114.6125521398063,
+              30.460858205247362
+            ],
+            [
+              114.61255363853415,
+              30.46083385535479
+            ],
+            [
+              114.61239821995073,
+              30.46082742518
+            ],
+            [
+              114.61240251124894,
+              30.460852464149667
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "23970355-8c72-4abf-b56e-32a9affb68ac",
+        "name": "停车区 83",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61241150439825,
+              30.460704931730948
+            ],
+            [
+              114.61255784542884,
+              30.460713553287952
+            ],
+            [
+              114.61256595777212,
+              30.460689170689598
+            ],
+            [
+              114.61240885577938,
+              30.460677737377488
+            ],
+            [
+              114.61241150439825,
+              30.460704931730948
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3fc9e664-4f9b-4496-be49-e82be7180712",
+        "name": "停车区 84",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61541094852193,
+              30.459648870857126
+            ],
+            [
+              114.61542677314486,
+              30.459646411252642
+            ],
+            [
+              114.61543087456657,
+              30.45953183470828
+            ],
+            [
+              114.61541296645126,
+              30.459531919184645
+            ],
+            [
+              114.61541094852193,
+              30.459648870857126
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "4966d057-c954-4ed3-905b-96ba04fb6b6b",
+        "name": "停车区 85",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61544399552801,
+              30.459646927349336
+            ],
+            [
+              114.61546052089405,
+              30.459646252051453
+            ],
+            [
+              114.61546876733273,
+              30.45953404311088
+            ],
+            [
+              114.61545294650104,
+              30.4595371027954
+            ],
+            [
+              114.61544399552801,
+              30.459646927349336
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "428ef6c2-d75d-4588-889d-9b115e0483b8",
+        "name": "停车区 86",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61359175390766,
+              30.460917477966646
+            ],
+            [
+              114.61398974244003,
+              30.460945199437983
+            ],
+            [
+              114.61399180803012,
+              30.46092323402316
+            ],
+            [
+              114.6135927541597,
+              30.460901244876993
+            ],
+            [
+              114.61359175390766,
+              30.460917477966646
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "b2061398-7892-4344-afbe-000b66189c7c",
+        "name": "停车区 87",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61361025383559,
+              30.460880161518364
+            ],
+            [
+              114.6137844506877,
+              30.46089366172573
+            ],
+            [
+              114.613783246993,
+              30.460877438453377
+            ],
+            [
+              114.61361237932927,
+              30.460867740608016
+            ],
+            [
+              114.61361025383559,
+              30.460880161518364
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "7c7d3ba1-22d9-4fd5-b248-0a1ff684ed61",
+        "name": "停车区 88",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61380649514884,
+              30.46089451210222
+            ],
+            [
+              114.61399499352153,
+              30.460904125065102
+            ],
+            [
+              114.61399267051497,
+              30.460885043683742
+            ],
+            [
+              114.61380970462565,
+              30.46087922326012
+            ],
+            [
+              114.61380649514884,
+              30.46089451210222
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "a9d07c05-e977-4a91-94e3-a73c4d56206c",
+        "name": "停车区 89",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.61362407668669,
+              30.46079990756786
+            ],
+            [
+              114.61379382431342,
+              30.460806745087194
+            ],
+            [
+              114.61379148684074,
+              30.46078575503366
+            ],
+            [
+              114.61362283711814,
+              30.46077795605197
+            ],
+            [
+              114.61362407668669,
+              30.46079990756786
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "316282da-17b2-4597-80d4-d757e62cd494",
+        "name": "停车区 90",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.6138059565147,
+              30.460808597293045
+            ],
+            [
+              114.61398450657327,
+              30.460813486064424
+            ],
+            [
+              114.61398769206296,
+              30.460794377106254
+            ],
+            [
+              114.6138146471085,
+              30.460788509445848
+            ],
+            [
+              114.6138059565147,
+              30.460808597293045
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "3f521ca9-21ee-4af6-8815-488e8fdd1b0a",
+        "name": "停车区 91",
+        "isNoParking": false,
+        "noParkingReason": null,
+        "noParkingDate": null,
+        "noParkingStartTime": null,
+        "noParkingEndTime": null
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              114.613602751303,
+              30.460737957157832
+            ],
+            [
+              114.61359734387241,
+              30.46075421097645
+            ],
+            [
+              114.61398648298494,
+              30.46077719921789
+            ],
+            [
+              114.61398749450815,
+              30.460762875358956
+            ],
+            [
+              114.613602751303,
+              30.460737957157832
+            ]
+          ]
+        ]
+      }
+    }
   ]
 }

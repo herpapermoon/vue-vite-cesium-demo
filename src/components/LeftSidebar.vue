@@ -72,13 +72,13 @@ const currentTab = computed(() => {
 const tabs = [
  // { id: 'city', label: '城市数据', icon: '🏙️', component: CityData },
   //{ id: 'stats', label: '统计视图', icon: '📊', component: Statistics },
-  { id: 'bikes', label: '单车数据', icon: '🚲', component: BikeStats },
+ // { id: 'bikes', label: '单车数据', icon: '🚲', component: BikeStats },
   { id: 'bikeManage', label: '单车管理', icon: '🔧', component: BikeManagement },
   { id: 'parking', label: '车位车库', icon: '🅿️', component: ParkingManagement }, // 新增
   { id: 'weather', label: '天气顾问', icon: '🌤️', component: WeatherAdvisor },
   { id: 'bikeNav', label: '单车导航', icon: '🧭', component: BikeNavigation },
   { id: 'tripPlanner', label: '出行规划', icon: '🗺️', component: TripPlanner },
-  { id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery },
+  //{ id: 'metroQuery', label: '地铁站查询', icon: '🚇', component: MetroStationQuery },
   { id: 'noParking', label: '禁停区管理', icon: '🚫', component: NoParking }, // 新增禁停区管理
   { id: 'anomalyDetection', label: '异常检测', icon: '⚠️', component: AnomalyDetection }, // 新增异常检测
   { id: 'bikeScan', label: '单车扫描', icon: '🔍', component: BikeScan } // 新增单车扫描

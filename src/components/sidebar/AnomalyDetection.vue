@@ -1024,7 +1024,7 @@ export default {
               return;
             }
 
-            const [lon, lat, height = 50] = anomaly.coordinates;
+            const [lon, lat, height = 5] = anomaly.coordinates;
             const position = Cesium.Cartesian3.fromDegrees(lon, lat, height);
             const color = this.getAnomalySeverityColor(anomaly.severity);
 

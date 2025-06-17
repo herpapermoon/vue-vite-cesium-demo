@@ -160,6 +160,14 @@
               <span class="detail-label">占用:</span>
               <span class="detail-value">{{ garage.bikeCount }}/{{ garage.maxCapacity }} ({{ garage.occupancyRate }}%)</span>
             </div>
+            <div class="garage-actions">
+              <button 
+                class="reserve-btn" 
+                @click.stop="openReservation(garage)"
+                :disabled="garage.isFull">
+                🚗 预约车位
+              </button>
+            </div>
           </div>
           <div class="click-hint">点击跳转到地图位置</div>
         </div>
@@ -282,6 +290,88 @@
         </div>
       </div>
     </div>
+
+    <!-- 预约弹窗 -->
+    <div v-if="showReservation" class="reservation-modal">
+      <div class="reservation-content">
+        <div class="modal-header">
+          <h3>预约车位</h3>
+          <button class="close-btn" @click="closeReservation">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="garage-info-modal">
+            <p><strong>车库名称:</strong> {{ selectedGarage?.name }}</p>
+            <p><strong>可用车位:</strong> {{ selectedGarage ? (selectedGarage.maxCapacity - selectedGarage.bikeCount) : 0 }}</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="userName">姓名</label>
+            <input 
+              type="text" 
+              id="userName" 
+              v-model="reservationForm.userName"
+              placeholder="请输入您的姓名">
+          </div>
+          
+          <div class="form-group">
+            <label for="carNumber">车牌号码</label>
+            <input 
+              type="text" 
+              id="carNumber" 
+              v-model="reservationForm.carNumber"
+              placeholder="请输入车牌号码">
+          </div>
+          
+          <div class="form-group">
+            <label for="phone">联系电话</label>
+            <input 
+              type="tel" 
+              id="phone" 
+              v-model="reservationForm.phone"
+              placeholder="请输入联系电话">
+          </div>
+          
+          <div class="form-group">
+            <label for="arrivalTime">预计到达时间</label>
+            <input 
+              type="datetime-local" 
+              id="arrivalTime" 
+              v-model="reservationForm.arrivalTime">
+          </div>
+          
+          <div class="form-group">
+            <label for="duration">停车时长（小时）</label>
+            <input 
+              type="number" 
+              id="duration" 
+              v-model="reservationForm.duration"
+              min="1" 
+              max="24">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button 
+            class="submit-btn" 
+            @click="submitReservation"
+            :disabled="isSubmitting">
+            {{ isSubmitting ? '提交中...' : '确认预约' }}
+          </button>
+          <button class="cancel-btn" @click="closeReservation">取消</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 预约成功提示 -->
+    <div v-if="showSuccessMessage" class="success-message">
+      <div class="success-content">
+        <div class="success-icon">✓</div>
+        <h3>预约成功</h3>
+        <p>您已成功预约车位</p>
+        <p class="reservation-code">预约码: {{ reservationCode }}</p>
+        <p>请在预约时间内到达车库</p>
+        <button @click="closeSuccessMessage" class="ok-btn">我知道了</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -308,6 +398,22 @@ const outputContainer = ref(null);
 
 // 热力图状态
 const heatmapActive = ref(false);
+
+// 预约相关状态
+const showReservation = ref(false);
+const selectedGarage = ref(null);
+const reservationForm = ref({
+  userName: '',
+  carNumber: '',
+  phone: '',
+  arrivalTime: '',
+  duration: 1
+});
+const isSubmitting = ref(false);
+
+// 预约成功相关状态
+const showSuccessMessage = ref(false);
+const reservationCode = ref('');
 
 // 常量定义
 const PARKING_HEIGHT = 20;
@@ -747,6 +853,10 @@ const cleanup = () => {
     BikeHeatmapService.deactivate();
     heatmapActive.value = false;
   }
+  
+  // 关闭弹窗
+  showReservation.value = false;
+  showSuccessMessage.value = false;
 };
 
 // 清理定时器
@@ -1029,6 +1139,7 @@ const visualizeAll = () => {
     clearEntities();
     visualizeParkingSpots();
     visualizeGarages();
+    console.log('可视化已更新，当前车库状态:', garages.value.map(g => ({ name: g.name, bikeCount: g.bikeCount })));
   } else {
     clearEntities();
   }
@@ -1208,6 +1319,116 @@ const generateHeatmap = async () => {
   // 激活热力图
   const success = await BikeHeatmapService.activate();
   heatmapActive.value = success;
+};
+
+// 生成随机预约码
+const generateReservationCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+// 打开预约弹窗
+const openReservation = (garage) => {
+  selectedGarage.value = garage;
+  
+  // 设置默认到达时间为当前时间后1小时
+  const now = new Date();
+  now.setHours(now.getHours() + 1);
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  
+  reservationForm.value = {
+    userName: '',
+    carNumber: '',
+    phone: '',
+    arrivalTime: `${year}-${month}-${day}T${hours}:${minutes}`,
+    duration: 2
+  };
+  
+  showReservation.value = true;
+};
+
+// 关闭预约弹窗
+const closeReservation = () => {
+  showReservation.value = false;
+  selectedGarage.value = null;
+};
+
+// 提交预约
+const submitReservation = async () => {
+  // 简单验证
+  if (!reservationForm.value.userName || !reservationForm.value.carNumber || !reservationForm.value.phone) {
+    alert('请填写完整的预约信息');
+    return;
+  }
+  
+  isSubmitting.value = true;
+  
+  try {
+    // 模拟提交延迟
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // 更新车库车辆数量
+    if (selectedGarage.value) {
+      const garageIndex = garages.value.findIndex(g => g.id === selectedGarage.value.id);
+      if (garageIndex !== -1) {
+        // 增加一辆车
+        const updatedGarage = { ...garages.value[garageIndex] };
+        updatedGarage.bikeCount += 1;
+        
+        // 更新状态
+        updatedGarage.isOccupied = updatedGarage.bikeCount > 0;
+        updatedGarage.isFull = updatedGarage.bikeCount >= updatedGarage.maxCapacity;
+        updatedGarage.occupancyRate = (updatedGarage.bikeCount / updatedGarage.maxCapacity * 100).toFixed(1);
+        
+        // 使用数组替换方式更新车库数据，确保响应式
+        garages.value = [
+          ...garages.value.slice(0, garageIndex),
+          updatedGarage,
+          ...garages.value.slice(garageIndex + 1)
+        ];
+        
+        console.log(`车库 ${updatedGarage.name} 更新后的车辆数量: ${updatedGarage.bikeCount}`);
+        
+        // 如果可视化开启，更新显示
+        if (showVisualization.value) {
+          visualizeAll();
+        }
+      }
+    }
+    
+    // 生成预约码
+    reservationCode.value = generateReservationCode();
+    
+    // 显示成功消息
+    showSuccessMessage.value = true;
+    
+    // 关闭预约窗口
+    showReservation.value = false;
+  } catch (error) {
+    console.error('预约提交失败:', error);
+    alert('预约提交失败，请稍后重试');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+// 关闭成功提示
+const closeSuccessMessage = () => {
+  showSuccessMessage.value = false;
+  
+  // 添加一个刷新状态的调用，确保显示最新数据
+  updateGarageStatus();
+  if (showVisualization.value) {
+    visualizeAll();
+  }
 };
 
 defineExpose({
@@ -1834,6 +2055,217 @@ defineExpose({
   .control-btn.active {
     background: #e91e63;
     color: white;
+  }
+
+  // 预约弹窗样式
+  .reservation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    
+    .reservation-content {
+      background: white;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #4a90e2;
+        color: white;
+        
+        h3 {
+          margin: 0;
+          font-size: 18px;
+        }
+        
+        .close-btn {
+          background: none;
+          border: none;
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+          
+          &:hover {
+            color: #f0f0f0;
+          }
+        }
+      }
+      
+      .modal-body {
+        padding: 16px;
+        max-height: 60vh;
+        overflow-y: auto;
+        
+        .garage-info-modal {
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #eee;
+          
+          p {
+            margin: 8px 0;
+            font-size: 14px;
+          }
+        }
+        
+        .form-group {
+          margin-bottom: 16px;
+          
+          label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+          }
+          
+          input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            
+            &:focus {
+              outline: none;
+              border-color: #4a90e2;
+              box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+            }
+          }
+        }
+      }
+      
+      .modal-footer {
+        padding: 12px 16px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: #f5f5f5;
+        
+        button {
+          padding: 10px 16px;
+          border-radius: 4px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          
+          &.submit-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            
+            &:hover:not(:disabled) {
+              background: #388e3c;
+            }
+            
+            &:disabled {
+              background: #a5d6a7;
+              cursor: wait;
+            }
+          }
+          
+          &.cancel-btn {
+            background: white;
+            border: 1px solid #ddd;
+            color: #333;
+            
+            &:hover {
+              background: #f0f0f0;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // 预约成功消息样式
+  .success-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1010;
+    
+    .success-content {
+      background: white;
+      width: 90%;
+      max-width: 400px;
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      
+      .success-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #4caf50;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 32px;
+        margin: 0 auto 16px;
+      }
+      
+      h3 {
+        margin: 0 0 12px;
+        color: #4caf50;
+        font-size: 22px;
+      }
+      
+      p {
+        margin: 8px 0;
+        color: #666;
+        font-size: 16px;
+        
+        &.reservation-code {
+          background: #f5f5f5;
+          padding: 12px;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 20px;
+          letter-spacing: 2px;
+          color: #333;
+          margin: 16px 0;
+          font-weight: bold;
+        }
+      }
+      
+      .ok-btn {
+        margin-top: 20px;
+        padding: 10px 24px;
+        background: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: #357abd;
+          transform: translateY(-2px);
+        }
+      }
+    }
   }
 }
 </style>

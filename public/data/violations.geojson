@@ -11,459 +11,360 @@
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
+        "id": "V1749561889241",
+        "bikeId": "CUG-BK-001",
+        "type": " 违规停放在禁止停车区域",
+        "status": "resolved",
+        "location": "停车区 7 (道路维修)",
+        "detectedTime": "2025-06-10T13:22:54.241Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 7",
+        "adminNotes": "已拖走",
+        "resolvedTime": "2025-06-12T10:42:41.225Z",
+        "processedBy": "admin001"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.60968549008064,
+          30.458656391178316,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889242",
+        "bikeId": "CUG-BK-002",
+        "type": " 违规停放在禁止停车区域",
+        "status": "pending",
+        "location": "停车区 10 (消防通道)",
+        "detectedTime": "2025-06-10T13:22:54.242Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 10",
+        "adminNotes": "停车在消防通道",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61067327774734,
+          30.458773616671323,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889243",
+        "bikeId": "CUG-BK-003",
+        "type": " 违规停放在禁止停车区域",
+        "status": "pending",
+        "location": "停车区 20 (视察)",
+        "detectedTime": "2025-06-10T13:22:54.243Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 20",
+        "adminNotes": "停车在视察区域",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61239441661313,
+          30.458492726211993,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889244",
+        "bikeId": "CUG-BK-004",
+        "type": " 长时间占用停车位",
+        "status": "pending",
+        "location": "停车区 15",
+        "detectedTime": "2025-06-10T11:30:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 15",
+        "adminNotes": "超过4小时未移动",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61174305071107,
+          30.458457976816188,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889245",
+        "bikeId": "CUG-BK-005",
+        "type": " 占用多个停车位",
+        "status": "processing",
+        "location": "停车区 25",
+        "detectedTime": "2025-06-10T12:15:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 25",
+        "adminNotes": "横向停放占用两个车位",
         "resolvedTime": null,
-        "processedBy": null
+        "processedBy": "admin001"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.6128973622477,
+          30.458154624012035,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889246",
+        "bikeId": "CUG-BK-006",
+        "type": " 车辆损坏未报告",
+        "status": "pending",
+        "location": "停车区 35",
+        "detectedTime": "2025-06-10T13:00:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 35",
+        "adminNotes": "车轮损坏影响其他用户",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61356841801573,
+          30.45836133281233,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889247",
+        "bikeId": "CUG-BK-007",
+        "type": " 阻挡停车区入口",
+        "status": "pending",
+        "location": "停车区 40",
+        "detectedTime": "2025-06-10T13:10:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 40",
+        "adminNotes": "停在入口处影响通行",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61403541641062,
+          30.458266904939588,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889248",
+        "bikeId": "CUG-BK-008",
+        "type": " 超出停车区边界",
+        "status": "pending",
+        "location": "停车区 55 边界外",
+        "detectedTime": "2025-06-10T13:20:00.000Z",
+        "distanceFromParkingArea": 5,
+        "nearestParkingArea": "停车区 55",
+        "adminNotes": "超出划定区域5米",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61577773167652,
+          30.45983261615991,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
+        "id": "V1749561889249",
+        "bikeId": "CUG-BK-009",
+        "type": " 违规停放在禁止停车区域",
+        "status": "resolved",
+        "location": "停车区 7 (道路维修)",
+        "detectedTime": "2025-06-10T10:00:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 7",
+        "adminNotes": "已处理并移至正常停车区",
+        "resolvedTime": "2025-06-10T10:30:00.000Z",
+        "processedBy": "admin002"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.609685580078,
+          30.458657391068815,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889250",
+        "bikeId": "CUG-BK-010",
+        "type": " 倾倒阻碍通行",
+        "status": "pending",
+        "location": "停车区 65",
+        "detectedTime": "2025-06-10T13:25:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 65",
+        "adminNotes": "车辆倾倒占用通道",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61412095612883,
+          30.46188947383611,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
+        "id": "V1749561889251",
+        "bikeId": "CUG-BK-011",
+        "type": " 停放在人行道",
+        "status": "resolved",
+        "location": "停车区 76 附近人行道",
+        "detectedTime": "2025-06-10T13:30:00.000Z",
+        "distanceFromParkingArea": 8,
+        "nearestParkingArea": "停车区 76",
+        "adminNotes": "已拖走",
+        "resolvedTime": "2025-06-12T10:43:32.089Z",
+        "processedBy": "admin001"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.60991596407852,
+          30.45917874383561,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889252",
+        "bikeId": "CUG-BK-012",
+        "type": " 夜间违规停放",
+        "status": "processing",
+        "location": "停车区 82",
+        "detectedTime": "2025-06-09T23:45:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 82",
+        "adminNotes": "夜间停放时间超限",
         "resolvedTime": null,
-        "processedBy": null
+        "processedBy": "admin001"
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61247732489184,
+          30.46084033469953,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889253",
+        "bikeId": "CUG-BK-013",
+        "type": " 重复违规停放",
+        "status": "pending",
+        "location": "停车区 90",
+        "detectedTime": "2025-06-10T13:35:00.000Z",
+        "distanceFromParkingArea": 0,
+        "nearestParkingArea": "停车区 90",
+        "adminNotes": "本周第三次违规",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61389522874158,
+          30.460798553274447,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889254",
+        "bikeId": "CUG-BK-014",
+        "type": " 停放在绿化带",
+        "status": "pending",
+        "location": "停车区 45 附近绿化带",
+        "detectedTime": "2025-06-10T13:40:00.000Z",
+        "distanceFromParkingArea": 12,
+        "nearestParkingArea": "停车区 45",
+        "adminNotes": "停在草坪上损害绿化",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
+          114.61608545355386,
+          30.459095998165388,
+          10
         ]
       }
     },
     {
       "type": "Feature",
       "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
+        "id": "V1749561889255",
+        "bikeId": "CUG-BK-015",
+        "type": " 无锁停放",
+        "status": "pending",
+        "location": "停车区 60",
+        "detectedTime": "2025-06-10T13:45:00.000Z",
+        "distanceFromParkingArea": 10,
+        "nearestParkingArea": "停车区 60",
+        "adminNotes": "未正确锁车存在被盗风险",
         "resolvedTime": null,
         "processedBy": null
       },
       "geometry": {
         "type": "Point",
         "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "type": "Feature",
-        "nearestParkingArea": "",
-        "adminNotes": "",
-        "resolvedTime": null,
-        "processedBy": null
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          0,
-          0
+          114.6163721985637,
+          30.459989481688098,
+          10
         ]
       }
     }

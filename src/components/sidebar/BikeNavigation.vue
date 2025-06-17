@@ -7,11 +7,11 @@ import ParkingFinder from './ParkingFinder.vue' // 导入停车位查找组件
 // 地图API相关配置
 const API_KEY = '1f739688561b38fbe82ebc0bbf2eef2b'
 const UNIVERSITY_CENTER = [114.6190, 30.4589] // 中国地质大学未来城校区中心点
-const UNIVERSITY_BOUNDS = { // 地大未来城校区的大致范围 - 稍微放宽范围
-  minLon: 114.6050, 
-  maxLon: 114.6350,
-  minLat: 30.4450,
-  maxLat: 30.4730
+const UNIVERSITY_BOUNDS = { // 更新为实际的校区范围
+  minLon: 114.613886, // 最西边
+  maxLon: 114.622584, // 最东边
+  minLat: 30.454834,  // 最南边
+  maxLat: 30.459829   // 最北边
 }
 
 // 校园内预设POI数据 - 这些坐标是GCJ02坐标系
@@ -127,6 +127,50 @@ onMounted(() => {
     if (window.viewer3D) {
       viewer.value = window.viewer3D
       console.log('Cesium viewer loaded successfully')
+      
+      // 生成随机起点并设置
+      const randomStart = generateRandomLocation()
+      startPoint.value = {
+        name: randomStart.name,
+        location: [randomStart.location.lng, randomStart.location.lat],
+        wgsLocation: [randomStart.wgsLocation.lng, randomStart.wgsLocation.lat]
+      }
+      
+      // 在地图上标记当前位置
+      const currentLocationEntity = viewer.value.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(
+          randomStart.wgsLocation.lng,
+          randomStart.wgsLocation.lat,
+          5
+        ),
+        billboard: {
+          image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTQiIGZpbGw9IiMwMDc3ZmYiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIvPjwvc3ZnPg==',
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          scale: 0.5
+        },
+        label: {
+          text: '当前位置',
+          font: '14px sans-serif',
+          fillColor: Cesium.Color.WHITE,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          outlineWidth: 2,
+          outlineColor: Cesium.Color.BLACK,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -32),
+          showBackground: true,
+          backgroundColor: new Cesium.Color(0, 0, 0, 0.7)
+        }
+      })
+      
+      // 飞行到当前位置
+      viewer.value.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(
+          randomStart.wgsLocation.lng,
+          randomStart.wgsLocation.lat,
+          300
+        ),
+        duration: 1.5
+      })
       
       // 加载高德地图API
       loadAMapAPI()
@@ -863,6 +907,29 @@ function clearModel() {
   modelPaused.value = false
   modelProgress.value = 0
   if (animationFrameId) cancelAnimationFrame(animationFrameId)
+}
+
+// 在UNIVERSITY_BOUNDS后添加随机起点生成函数
+const generateRandomLocation = () => {
+  // 在校园范围内随机生成一个坐标点
+  const randomLng = UNIVERSITY_BOUNDS.minLon + 
+    Math.random() * (UNIVERSITY_BOUNDS.maxLon - UNIVERSITY_BOUNDS.minLon)
+  const randomLat = UNIVERSITY_BOUNDS.minLat + 
+    Math.random() * (UNIVERSITY_BOUNDS.maxLat - UNIVERSITY_BOUNDS.minLat)
+  
+  // 转换到WGS84坐标系
+  const wgsLocation = gcoord.transform(
+    [randomLng, randomLat],
+    gcoord.GCJ02,
+    gcoord.WGS84
+  )
+  
+  return {
+    name: '当前位置',
+    location: { lng: randomLng, lat: randomLat },
+    wgsLocation: { lng: wgsLocation[0], lat: wgsLocation[1] },
+    address: '我的位置'
+  }
 }
 </script>
 

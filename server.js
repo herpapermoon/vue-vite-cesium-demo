@@ -184,7 +184,7 @@ app.post('/api/save-parking-data', (req, res) => {
     }
     
     // 保存到文件
-    const filePath = path.join(dataDir, 'parkingdata.geojson');
+    const filePath = path.join(dataDir, 'CUG-station.geojson');
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
     
     console.log(`数据已保存到: ${filePath}`);

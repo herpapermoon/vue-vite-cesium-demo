@@ -601,6 +601,117 @@ const btnClickHandler = (btn) => {
       })
       break
     }
+
+        // 在 btnClickHandler 函数的 switch 语句中添加以下 case
+    case 'rain': {
+      caller(active, () => {
+        setRain(viewer3D)
+        showNotification('天气特效', '雨天效果已启用', 'info')
+      }, () => {
+        if (rain) {
+          rain.destroy()
+          rain = null
+        }
+        showNotification('天气特效', '雨天效果已关闭', 'info')
+      })
+      break
+    }
+    
+    case 'snow': {
+      caller(active, () => {
+        setSnow(viewer3D)
+        showNotification('天气特效', '雪天效果已启用', 'info')
+      }, () => {
+        if (snow) {
+          snow.destroy()
+          snow = null
+        }
+        showNotification('天气特效', '雪天效果已关闭', 'info')
+      })
+      break
+    }
+    
+    case 'fog': {
+      caller(active, () => {
+        setFog(viewer3D)
+        showNotification('天气特效', '雾天效果已启用', 'info')
+      }, () => {
+        if (fog) {
+          fog.destroy()
+          fog = null
+        }
+        showNotification('天气特效', '雾天效果已关闭', 'info')
+      })
+      break
+    }
+
+    
+    case 'vision': {
+      // 视域分析
+      caller(active, () => {
+        if (shed) {
+          shed.clear()
+        }
+        shed = new ViewShed(viewer3D, {
+          interactive: true,  // 启用交互式点选
+          loadModel: false,   // 不加载默认建筑模型，使用现有场景
+          viewDistance: 1000, // 观测距离1000米
+          horizontalViewAngle: 90,  // 水平视角90度
+          verticalViewAngle: 60     // 垂直视角60度
+        })
+        showNotification('视域分析', '视域分析已启动，请点击地图选择观测点', 'info')
+      }, () => {
+        if (shed) {
+          shed.clear()
+          shed = null
+        }
+        showNotification('视域分析', '视域分析已关闭', 'info')
+      })
+      break
+    }
+    
+    case 'visionAnalysis': {
+      // 通视度分析
+      caller(active, () => {
+        // 创建通视分析实例，启用交互式点选
+        const visionAnalysis = new VisionAnalysis(viewer3D, {
+          interactive: true
+        })
+        
+        // 将实例保存到全局变量以便后续清理
+        window.currentVisionAnalysis = visionAnalysis
+        
+        showNotification('通视分析', '通视度分析已启动，请依次点击起点和终点', 'info')
+      }, () => {
+        // 清理通视分析
+        if (window.currentVisionAnalysis) {
+          window.currentVisionAnalysis.destroy()
+          window.currentVisionAnalysis = null
+        }
+        // 清理函数式API创建的线条
+        clearLine(viewer3D)
+        showNotification('通视分析', '通视度分析已关闭', 'info')
+      })
+      break
+    }
+
+    case 'geojson': {
+      // 武汉建筑模型
+      caller(active, async () => {
+        try {
+          await addGeojson(viewer3D)
+          showNotification('建筑模型', '武汉建筑模型加载成功', 'info')
+        } catch (error) {
+          console.error('加载建筑模型失败:', error)
+          showNotification('建筑模型', '武汉建筑模型加载失败，请检查网络连接', 'error')
+        }
+      }, () => {
+        removeGeojson(viewer3D)
+        back2Home()
+        showNotification('建筑模型', '武汉建筑模型已移除', 'info')
+      })
+      break
+    }
     
     default: break
   }

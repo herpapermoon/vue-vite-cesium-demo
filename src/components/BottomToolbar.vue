@@ -68,7 +68,7 @@ const categories = [
       {
         label: '视图工具',
         tools: [
-          { id: 'billboard', label: '生成共享单车', icon: '📍' },
+          { id: 'billboard', label: '生成单车', icon: '📍' },
           { id: 'vision', label: '视域分析', icon: '👁️' },
           { id: 'visionAnalysis', label: '通视度分析', icon: '🔍' },
         ]

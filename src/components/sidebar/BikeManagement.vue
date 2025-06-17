@@ -11,7 +11,7 @@
             <option value="available">可用单车</option>
             <option value="inUse">使用中</option>
             <option value="maintenance">维护中</option>
-            <option value="lowBattery">低电量</option>
+            <!--<option value="lowBattery">低电量</option>-->
           </select>
         </div>
         <div class="control-item">
@@ -41,7 +41,7 @@
               </th>
               <th>单车ID</th>
               <th>状态</th>
-              <th>电量</th>
+              <!--<th>电量</th>-->
               <th>最后更新</th>
             </tr>
           </thead>
@@ -71,7 +71,7 @@
       <h4>已选择 {{ selectedBikes.length }} 辆单车</h4>
       <div class="operations-buttons">
         <button class="primary-btn" @click="locateBikes">在地图上定位</button>
-        <button class="warning-btn" @click="rechargeBikes">发起充电</button>
+       <!-- <button class="warning-btn" @click="rechargeBikes">发起充电</button>-->
       </div>
     </div>
 
@@ -138,7 +138,7 @@ const statusOptions = [
   { label: '可用单车', value: 'available' },
   { label: '使用中', value: 'inUse' },
   { label: '维护中', value: 'maintenance' },
-  { label: '低电量', value: 'lowBattery' }
+ // { label: '低电量', value: 'lowBattery' }
 ];
 
 // Cesium viewer引用
